@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bi0cyph3r | Encode</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='dna-favicon.svg') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body>
+    <div class="app-container">
+        <nav class="app-nav">
+            <div class="nav-brand">
+                <h2> bi<span class="highlight">0</span>cyph<span class="highlight">3</span>r</h2>
+            </div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('encode_page') }}" class="active">Encode</a></li>
+                <li><a href="{{ url_for('decode_page') }}">Decode</a></li>
+                <li><a href="{{ url_for('contact') }}">Contact</a></li>
+                <li><a href="{{ url_for('logout') }}" class="logout-link">Logout</a></li>
+            </ul>
+            <div class="user-info">
+                <span>{{ session.user }}</span>
+            </div>
+        </nav>
+
+        <div class="content-container">
+            <header class="page-header">
+                <h1>Encode <span class="highlight">Message</span> 🧬</h1>
+                <p class="subtitle">Convert your text into secure DNA sequences</p>
+            </header>
+
+            <div class="encode-container">
+                <form method="POST" action="{{ url_for('process_encode') }}" id="encode-form" class="process-form">
+                    <div class="form-group">
+                        <label for="message">Enter Text Message:</label>
+                        <textarea id="message" name="message" placeholder="Type your message here..." required>{{ message if message else '' }}</textarea>
+                        <div class="char-counter">0 characters</div>
+                    </div>
+                    
+                    <div class="form-options">
+                        <div class="option-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="include_spaces" checked>
+                                Include spaces
+                            </label>
+                        </div>
+                        <div class="option-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="uppercase">
+                                Convert to uppercase
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn encode-btn">Encode to DNA</button>
+                    
+                    {% if error %}
+                    <div class="error-message">{{ error }}</div>
+                    {% endif %}
+                </form>
+
+                {% if encoded %}
+                <div class="result-container">
+                    <h3>Encoded DNA Sequence:</h3>
+                    <div class="result">
+                        <p id="encoded-result">{{ encoded }}</p>
+                        <button class="copy-btn" data-target="encoded-result">Copy</button>
+                    </div>
+                    
+                    <div class="result-stats">
+                        <div class="stat">
+                            <span class="stat-label">Length:</span>
+                            <span class="stat-value">{{ encoded|length }} bases</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">A:</span>
+                            <span class="stat-value">{{ encoded.count('A') }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">T:</span>
+                            <span class="stat-value">{{ encoded.count('T') }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">C:</span>
+                            <span class="stat-value">{{ encoded.count('C') }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">G:</span>
+                            <span class="stat-value">{{ encoded.count('G') }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="info-panel encode-info">
+                <h3>How Encoding Works</h3>
+                <p>The encoding process converts your text message into a DNA sequence following these steps:</p>
+                <ol class="process-steps">
+                    <li>Convert each character to its ASCII value</li>
+                    <li>Convert ASCII values to 8-bit binary</li>
+                    <li>Map binary pairs to DNA bases (A=00, T=01, C=10, G=11)</li>
+                </ol>
+                <p class="info-note">The resulting DNA sequence can only be decoded with the correct mapping key.</p>
+            </div>
+        </div>
+
+        <footer class="app-footer">
+            <p>&copy; 2023 bi0cyph3r | Advanced DNA Cryptography System</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html> 
