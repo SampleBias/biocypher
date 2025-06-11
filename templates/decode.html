@@ -35,7 +35,7 @@
 
             <div class="decode-container">
                 <form method="POST" action="{{ url_for('process_decode') }}" id="decode-form" class="process-form">
-                    {{ csrf_token() }}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="form-group">
                         <label for="sequence">Enter DNA Sequence:</label>
                         <textarea id="sequence" name="sequence" placeholder="Enter DNA sequence (only A, T, C, G)" required>{{ sequence if sequence else '' }}</textarea>

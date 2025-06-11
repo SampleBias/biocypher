@@ -10,6 +10,10 @@ class Config:
     SESSION_PERMANENT = False
     PERMANENT_SESSION_LIFETIME = timedelta(hours=2)
     
+    # CSRF settings
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = 3600  # 1 hour
+    
     # Rate limiting
     RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL', 'memory://')
     RATELIMIT_DEFAULT = "100 per hour"
@@ -22,6 +26,7 @@ class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
     RATELIMIT_ENABLED = False
+    WTF_CSRF_ENABLED = False  # Temporarily disable for testing
 
 class ProductionConfig(Config):
     """Production configuration"""

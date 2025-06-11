@@ -35,7 +35,7 @@
 
             <div class="encode-container">
                 <form method="POST" action="{{ url_for('process_encode') }}" id="encode-form" class="process-form">
-                    {{ csrf_token() }}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="form-group">
                         <label for="message">Enter Text Message:</label>
                         <textarea id="message" name="message" placeholder="Type your message here..." required>{{ message if message else '' }}</textarea>
