@@ -1,15 +1,17 @@
 # bi0cyph3r - DNA Cryptography System
 
-A sophisticated yet minimal Flask web application that allows users to encode and decode messages using DNA cryptography.
+A sophisticated, secure Flask web application that allows users to encode and decode messages using DNA cryptography with enterprise-grade security features.
 
 ## Features
 
-- Secure user authentication system
-- Dedicated pages for encoding messages and decoding DNA sequences
-- Clean, intuitive, futuristic user interface
-- Real-time validation and error handling
-- Advanced DNA cryptography algorithms
-- Contact page for requesting access
+- 🔐 **Secure Authentication**: Password hashing with Werkzeug
+- 🛡️ **Security Hardened**: CSRF protection, rate limiting, input validation
+- 🧬 **Advanced DNA Crypto**: Modular cryptography system with error handling
+- 🎨 **Modern UI**: Clean, responsive, futuristic interface
+- 📊 **Analytics**: DNA sequence statistics and insights
+- ⚡ **Performance**: Optimized code structure and error handling
+- 🧪 **Tested**: Comprehensive unit test coverage
+- 📝 **Logging**: Detailed application logging for monitoring
 
 ## How It Works
 
@@ -23,62 +25,126 @@ The application converts text to ASCII, then to binary, and finally maps the bin
 
 ## Installation
 
-1. Clone this repository
-2. Install the required dependencies:
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd biocypher
    ```
+
+2. **Set up virtual environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+   ```bash
    pip install -r requirements.txt
    ```
-3. Run the application:
+
+4. **Configure environment** (optional)
+   ```bash
+   export FLASK_ENV=development
+   export SECRET_KEY=your-secret-key
+   export MAX_MESSAGE_LENGTH=1000
    ```
+
+5. **Run tests** (recommended)
+   ```bash
+   python test_dna_crypto.py
+   ```
+
+6. **Start the application**
+   ```bash
    python app.py
    ```
-4. Open your browser and navigate to `http://127.0.0.1:5000/`
-5. Login with the demo credentials:
-   - Username: `demo`
-   - Password: `password123`
 
-## Application Structure
+7. **Access the application**
+   - Open `http://127.0.0.1:5000/`
+   - Login with demo credentials:
+     - Username: `demo`
+     - Password: `password123`
 
-- **Login Page**: Secure authentication system
-- **Dashboard**: Central navigation hub
-- **Encode Page**: Convert text messages to DNA sequences
-- **Decode Page**: Translate DNA sequences back to text
-- **Contact Page**: Request access or get support
+## Project Structure
+
+```
+biocypher/
+├── app.py                 # Main Flask application
+├── dna_crypto.py         # DNA cryptography module
+├── config.py             # Configuration management
+├── test_dna_crypto.py    # Unit tests
+├── requirements.txt      # Python dependencies
+├── static/               # CSS, JS, images
+├── templates/            # HTML templates
+│   ├── login.html
+│   ├── dashboard.html
+│   ├── encode.html
+│   ├── decode.html
+│   ├── contact.html
+│   └── error.html
+└── README.md
+```
+
+## Application Pages
+
+- **🔐 Login**: Secure authentication with hashed passwords
+- **📊 Dashboard**: Central navigation with system overview
+- **📝 Encode**: Convert messages to DNA with validation & stats
+- **🧬 Decode**: Translate DNA sequences with error handling
+- **📧 Contact**: Support and access requests
+- **❌ Error**: Comprehensive error handling pages
 
 ## Example
 
 - Input: "HELLO WORLD"
 - Encoded DNA Sequence: "ACTACAAGTAGTATGCGGCCGATGCACAGTAAT"
 
-## Security Notice
+## Security Features
 
-This application is for demonstration purposes only. In a production environment, you would want to implement proper user authentication, database storage, and additional security measures.
+- **Password Hashing**: Uses Werkzeug for secure password storage
+- **Rate Limiting**: Prevents abuse with configurable limits
+- **Input Validation**: Comprehensive sanitization and validation
+- **CSRF Protection**: Protects against cross-site request forgery
+- **Session Security**: Secure session configuration
+- **Error Handling**: Safe error messages without information leakage
+- **Logging**: Security events monitoring
 
-## Setting Up a Virtual Environment
+## Environment Variables
 
-It's recommended to use a virtual environment for this project:
+Create a `.env` file or set environment variables:
 
-1. Create a virtual environment:
-   ```
-   python -m venv venv
-   ```
+```bash
+FLASK_ENV=development          # or production/testing
+SECRET_KEY=your-secret-key     # Generate a secure random key
+MAX_MESSAGE_LENGTH=1000        # Maximum message length
+MAX_DNA_SEQUENCE_LENGTH=10000  # Maximum DNA sequence length
+REDIS_URL=redis://localhost:6379  # For rate limiting (optional)
+```
 
-2. Activate the virtual environment:
-   - On macOS/Linux:
-     ```
-     source venv/bin/activate
-     ```
-   - On Windows:
-     ```
-     venv\Scripts\activate
-     ```
+## Testing
 
-3. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+Run the unit tests to verify functionality:
 
-4. Run the application:
-   ```
-   python app.py
-   ``` 
+```bash
+# Run DNA crypto tests  
+python test_dna_crypto.py
+
+# Run all tests with verbose output
+python -m unittest test_dna_crypto.py -v
+```
+
+## Production Deployment
+
+For production deployment:
+
+1. Set `FLASK_ENV=production`
+2. Generate a secure `SECRET_KEY`
+3. Use a proper WSGI server like Gunicorn
+4. Set up Redis for rate limiting
+5. Configure HTTPS
+6. Implement proper logging and monitoring
+
+Example production command:
+```bash
+gunicorn --bind 0.0.0.0:8000 app:app
+```

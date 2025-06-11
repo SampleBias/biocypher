@@ -1,24 +1,48 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
+from werkzeug.security import check_password_hash, generate_password_hash
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_wtf.csrf import CSRFProtect
 import os
+import logging
 from functools import wraps
+import re
+from html import escape
 
-app = Flask(__name__)
-app.secret_key = os.urandom(24)  # For session management and flash messages
+from dna_crypto import DNACrypto, DNACryptoError
+from config import config
 
-# DNA base mapping for binary values
-DNA_ENCODE = {
-    '00': 'A',
-    '01': 'T',
-    '10': 'C',
-    '11': 'G'
-}
+# Initialize Flask app
+def create_app(config_name=None):
+    app = Flask(__name__)
+    
+    # Load configuration
+    config_name = config_name or os.environ.get('FLASK_ENV', 'development')
+    app.config.from_object(config[config_name])
+    
+    # Initialize extensions
+    csrf = CSRFProtect(app)
+    limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=[app.config['RATELIMIT_DEFAULT']]
+    )
+    limiter.init_app(app)
+    
+    # Configure logging
+    if not app.debug:
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s %(levelname)s %(name)s %(message)s'
+        )
+        app.logger.setLevel(logging.INFO)
+    
+    return app, limiter, csrf
 
-# Reverse mapping for decoding
-DNA_DECODE = {v: k for k, v in DNA_ENCODE.items()}
+app, limiter, csrf = create_app()
 
-# Simple user authentication (in a real app, use a database and proper password hashing)
+# Secure user authentication with hashed passwords
 USERS = {
-    'demo': 'password123'
+    'demo': generate_password_hash('password123')
 }
 
 # Login required decorator
@@ -31,72 +55,43 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def text_to_binary(text):
-    """Convert text to binary representation"""
-    binary = ''
-    for char in text:
-        # Convert character to ASCII, then to 8-bit binary
-        ascii_val = ord(char)
-        bin_val = format(ascii_val, '08b')
-        binary += bin_val
-    return binary
-
-def binary_to_dna(binary):
-    """Convert binary to DNA sequence"""
-    dna = ''
-    # Process binary string in pairs
-    for i in range(0, len(binary), 2):
-        if i + 1 < len(binary):
-            pair = binary[i:i+2]
-            dna += DNA_ENCODE[pair]
-        else:
-            # Handle odd-length binary by padding
-            pair = binary[i] + '0'
-            dna += DNA_ENCODE[pair]
-    return dna
-
-def dna_to_binary(dna):
-    """Convert DNA sequence to binary"""
-    binary = ''
-    for base in dna:
-        if base in DNA_DECODE:
-            binary += DNA_DECODE[base]
-        else:
-            # Skip invalid bases
-            continue
-    return binary
-
-def binary_to_text(binary):
-    """Convert binary to text"""
-    text = ''
-    # Process binary in 8-bit chunks
-    for i in range(0, len(binary), 8):
-        if i + 8 <= len(binary):
-            byte = binary[i:i+8]
-            ascii_val = int(byte, 2)
-            text += chr(ascii_val)
-    return text
-
-def encode_message(message):
-    """Encode a message into DNA sequence"""
+def validate_and_sanitize_message(message):
+    """Validate and sanitize input message"""
     if not message:
-        return ""
-    binary = text_to_binary(message)
-    dna = binary_to_dna(binary)
-    return dna
-
-def decode_sequence(sequence):
-    """Decode a DNA sequence back to the original message"""
-    if not sequence:
-        return ""
-    # Validate input - only A, T, C, G allowed
-    valid_bases = set('ATCG')
-    if not all(base in valid_bases for base in sequence):
-        return "Error: Invalid DNA sequence. Only A, T, C, G are allowed."
+        return "", "Please enter a message to encode"
     
-    binary = dna_to_binary(sequence)
-    text = binary_to_text(binary)
-    return text
+    # Remove potential XSS attempts
+    message = escape(message.strip())
+    
+    # Check length limits
+    max_length = app.config.get('MAX_MESSAGE_LENGTH', 1000)
+    if len(message) > max_length:
+        return "", f"Message too long. Maximum {max_length} characters allowed."
+    
+    # Check for valid printable characters
+    if not all(ord(char) >= 32 and ord(char) <= 126 for char in message):
+        return "", "Message contains invalid characters. Only printable ASCII characters allowed."
+    
+    return message, ""
+
+def validate_dna_sequence(sequence):
+    """Validate DNA sequence input"""
+    if not sequence:
+        return "", "Please enter a DNA sequence to decode"
+    
+    # Remove whitespace and convert to uppercase
+    sequence = re.sub(r'\s+', '', sequence.upper())
+    
+    # Check if sequence contains only valid DNA bases
+    if not re.match(r'^[ATCG]+$', sequence):
+        return "", "Invalid DNA sequence. Only A, T, C, G are allowed."
+    
+    # Check length limits
+    max_length = app.config.get('MAX_DNA_SEQUENCE_LENGTH', 10000)
+    if len(sequence) > max_length:
+        return "", f"DNA sequence too long. Maximum {max_length} bases allowed."
+    
+    return sequence, ""
 
 @app.route('/')
 def index():
@@ -112,7 +107,7 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        if username in USERS and USERS[username] == password:
+        if username in USERS and check_password_hash(USERS[username], password):
             session['user'] = username
             flash('Login successful!', 'success')
             return redirect(url_for('dashboard'))
@@ -148,43 +143,67 @@ def decode_page():
 
 @app.route('/process_encode', methods=['POST'])
 @login_required
+@limiter.limit("10 per minute")
 def process_encode():
     """Process the encoding form submission"""
     message = request.form.get('message', '')
     encoded_result = ""
     error = ""
+    stats = {}
     
-    if message:
-        encoded_result = encode_message(message)
-    else:
-        error = "Please enter a message to encode"
+    try:
+        # Validate and sanitize input
+        message, error = validate_and_sanitize_message(message)
+        
+        if not error:
+            encoded_result = DNACrypto.encode_message(message)
+            stats = DNACrypto.get_sequence_stats(encoded_result)
+            app.logger.info(f"Message encoded successfully by user {session.get('user')}")
+    
+    except DNACryptoError as e:
+        error = str(e)
+        app.logger.error(f"Encoding error: {error}")
+    except Exception as e:
+        error = "An unexpected error occurred during encoding"
+        app.logger.error(f"Unexpected encoding error: {str(e)}")
     
     return render_template('encode.html', 
                           message=message,
                           encoded=encoded_result, 
-                          error=error)
+                          error=error,
+                          stats=stats)
 
 @app.route('/process_decode', methods=['POST'])
 @login_required
+@limiter.limit("10 per minute")
 def process_decode():
     """Process the decoding form submission"""
     sequence = request.form.get('sequence', '')
     decoded_result = ""
     error = ""
+    stats = {}
     
-    if sequence:
-        # Check if sequence contains only valid DNA bases
-        if not all(base in 'ATCG' for base in sequence):
-            error = "Invalid DNA sequence. Only A, T, C, G are allowed."
-        else:
-            decoded_result = decode_sequence(sequence)
-    else:
-        error = "Please enter a DNA sequence to decode"
+    try:
+        # Validate and sanitize input
+        sequence, error = validate_dna_sequence(sequence)
+        
+        if not error:
+            decoded_result = DNACrypto.decode_sequence(sequence)
+            stats = DNACrypto.get_sequence_stats(sequence)
+            app.logger.info(f"Sequence decoded successfully by user {session.get('user')}")
+    
+    except DNACryptoError as e:
+        error = str(e)
+        app.logger.error(f"Decoding error: {error}")
+    except Exception as e:
+        error = "An unexpected error occurred during decoding"
+        app.logger.error(f"Unexpected decoding error: {str(e)}")
     
     return render_template('decode.html', 
                           sequence=sequence,
                           decoded=decoded_result, 
-                          error=error)
+                          error=error,
+                          stats=stats)
 
 @app.route('/contact')
 def contact():
@@ -218,6 +237,26 @@ def api_decode():
     
     decoded = decode_sequence(sequence)
     return jsonify({'decoded': decoded})
+
+# Error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('error.html', 
+                         error_code=404, 
+                         error_message="Page not found"), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f'Server Error: {error}')
+    return render_template('error.html', 
+                         error_code=500, 
+                         error_message="Internal server error"), 500
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return render_template('error.html', 
+                         error_code=429, 
+                         error_message="Rate limit exceeded. Please try again later."), 429
 
 if __name__ == '__main__':
     app.run(debug=True) 

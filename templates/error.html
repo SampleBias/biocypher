@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bi0cyph3r | Error {{ error_code }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='dna-favicon.svg') }}">
+</head>
+<body>
+    <div class="app-container">
+        <div class="error-container">
+            <div class="error-icon">
+                <div class="error-code">{{ error_code }}</div>
+            </div>
+            
+            <div class="error-content">
+                <h1>Oops! Something went wrong</h1>
+                <p class="error-message">{{ error_message }}</p>
+                
+                <div class="error-actions">
+                    {% if session.user %}
+                        <a href="{{ url_for('dashboard') }}" class="btn error-btn">Return to Dashboard</a>
+                    {% else %}
+                        <a href="{{ url_for('index') }}" class="btn error-btn">Go to Login</a>
+                    {% endif %}
+                    <a href="javascript:history.back()" class="btn error-btn secondary">Go Back</a>
+                </div>
+            </div>
+        </div>
+        
+        <footer class="app-footer">
+            <p>&copy; 2023 bi0cyph3r | Advanced DNA Cryptography System</p>
+        </footer>
+    </div>
+
+    <style>
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .error-icon {
+            margin-bottom: 2rem;
+        }
+        
+        .error-code {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            text-shadow: 0 0 20px rgba(255, 64, 129, 0.5);
+            margin-bottom: 1rem;
+        }
+        
+        .error-content h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+        
+        .error-message {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: rgba(255, 255, 255, 0.8);
+            max-width: 600px;
+        }
+        
+        .error-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .error-btn {
+            background: var(--primary-color);
+            color: var(--dark-color);
+            padding: 0.8rem 2rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .error-btn.secondary {
+            background: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+        
+        .error-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .error-code {
+                font-size: 3rem;
+            }
+            
+            .error-content h1 {
+                font-size: 1.5rem;
+            }
+            
+            .error-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</body>
+</html> 
