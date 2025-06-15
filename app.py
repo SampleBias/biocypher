@@ -62,17 +62,20 @@ def validate_and_sanitize_message(message):
     if not message:
         return "", "Please enter a message to encode"
     
-    # Remove potential XSS attempts
-    message = escape(message.strip())
+    # Remove potential XSS attempts - but preserve newlines
+    message = escape(message.rstrip())
     
     # Check length limits
     max_length = app.config.get('MAX_MESSAGE_LENGTH', 1000)
     if len(message) > max_length:
         return "", f"Message too long. Maximum {max_length} characters allowed."
     
-    # Check for valid printable characters
-    if not all(ord(char) >= 32 and ord(char) <= 126 for char in message):
-        return "", "Message contains invalid characters. Only printable ASCII characters allowed."
+    # Check for valid characters (printable ASCII + common whitespace)
+    # Allow: printable ASCII (32-126), newline (10), carriage return (13), tab (9)
+    valid_chars = set(range(32, 127)) | {9, 10, 13}  # printable + tab, newline, carriage return
+    if not all(ord(char) in valid_chars for char in message):
+        invalid_chars = [repr(char) for char in message if ord(char) not in valid_chars]
+        return "", f"Message contains invalid characters: {', '.join(invalid_chars[:5])}. Only printable ASCII and basic whitespace allowed."
     
     return message, ""
 
