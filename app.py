@@ -1,3 +1,14 @@
+"""
+bi0cyph3r DNA Cryptography System
+Copyright (c) 2025 James Utley
+
+Licensed under the bi0cyph3r DNA Cryptography System License.
+See LICENSE file for details.
+
+This software is for personal, educational, and research use only.
+Commercial use requires explicit written permission.
+"""
+
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_limiter import Limiter

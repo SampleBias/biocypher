@@ -187,3 +187,18 @@ Example production command:
 ```bash
 gunicorn --bind 0.0.0.0:8000 app:app
 ```
+
+## License
+
+This project is licensed under a custom restrictive license - see the [LICENSE](LICENSE) file for details.
+
+**Copyright (c) 2025 James Utley**
+
+**Important License Terms:**
+- ✅ **Allowed**: Personal, educational, and research use with attribution
+- ❌ **Restricted**: Commercial use, redistribution, and public deployment require explicit written permission
+- 📧 **Contact**: For commercial licensing or permissions, contact James Utley
+
+This software is provided for educational and research purposes. Any commercial use, including but not limited to selling, licensing, or incorporating this software into commercial products or services, requires explicit written permission from the author.
+
+For more information about licensing options, please refer to the full LICENSE file or contact the author for commercial licensing arrangements.
