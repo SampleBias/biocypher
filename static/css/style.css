@@ -486,6 +486,10 @@ textarea:focus {
     margin-bottom: 0.5rem;
 }
 
+.nanopore-options, .secure-options {
+    display: none;
+}
+
 .checkbox-label {
     display: flex;
     align-items: center;

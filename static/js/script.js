@@ -189,6 +189,45 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Mode toggle functionality for all modes
+    window.toggleModeOptions = function() {
+        const modeSelect = document.getElementById('mode');
+        const nanoporeOptions = document.querySelector('.nanopore-options');
+        const secureOptions = document.querySelector('.secure-options');
+        const passwordInput = document.getElementById('password');
+        
+        if (modeSelect) {
+            const selectedMode = modeSelect.value;
+            
+            // Hide all option groups first
+            if (nanoporeOptions) nanoporeOptions.style.display = 'none';
+            if (secureOptions) secureOptions.style.display = 'none';
+            
+            // Show appropriate option group
+            if (selectedMode === 'nanopore' && nanoporeOptions) {
+                nanoporeOptions.style.display = 'block';
+            } else if (selectedMode === 'secure' && secureOptions) {
+                secureOptions.style.display = 'block';
+                // Set password as required for secure mode
+                if (passwordInput) {
+                    passwordInput.required = true;
+                }
+            } else if (passwordInput) {
+                // Remove password requirement for non-secure modes
+                passwordInput.required = false;
+            }
+        }
+    };
+    
+    // Legacy function for backward compatibility
+    window.toggleNanoporeOptions = window.toggleModeOptions;
+
+    // Initialize mode options display on page load
+    const modeSelect = document.getElementById('mode');
+    if (modeSelect) {
+        toggleModeOptions();
+    }
+
     // Add particle effect to the background (optional - uncomment to enable)
     /*
     function createParticle() {

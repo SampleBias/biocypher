@@ -44,15 +44,27 @@
                     
                     <div class="form-options">
                         <div class="option-group">
+                            <label for="mode">Encoding Mode:</label>
+                            <select id="mode" name="mode" onchange="toggleModeOptions()">
+                                <option value="basic" {{ 'selected' if not mode or mode == 'basic' else '' }}>Basic DNA Encoding</option>
+                                <option value="nanopore" {{ 'selected' if mode == 'nanopore' else '' }}>Nanopore Optimized</option>
+                                <option value="secure" {{ 'selected' if mode == 'secure' else '' }}>Secure (AES + DNA)</option>
+                            </select>
+                        </div>
+                        <div class="option-group nanopore-options" id="nanopore-options">
                             <label class="checkbox-label">
-                                <input type="checkbox" name="include_spaces" checked>
-                                Include spaces
+                                <input type="checkbox" name="error_correction" {{ 'checked' if use_error_correction else '' }}>
+                                Error correction (3x redundancy)
                             </label>
                         </div>
-                        <div class="option-group">
+                        <div class="option-group secure-options" id="secure-options">
+                            <label for="password">Encryption Password:</label>
+                            <input type="password" id="password" name="password" placeholder="Enter strong password..." 
+                                   {{ 'required' if mode == 'secure' else '' }}>
+                            <small class="password-hint">Use at least 8 characters with uppercase, lowercase, numbers, and symbols</small>
                             <label class="checkbox-label">
-                                <input type="checkbox" name="uppercase">
-                                Convert to uppercase
+                                <input type="checkbox" name="error_correction" {{ 'checked' if use_error_correction else '' }}>
+                                Enable error correction
                             </label>
                         </div>
                     </div>
@@ -75,8 +87,38 @@
                     <div class="result-stats">
                         <div class="stat">
                             <span class="stat-label">Length:</span>
-                            <span class="stat-value">{{ encoded|length }} bases</span>
+                            <span class="stat-value">{{ stats.length if stats else encoded|length }} bases</span>
                         </div>
+                        {% if stats and stats.bases %}
+                        <div class="stat">
+                            <span class="stat-label">A:</span>
+                            <span class="stat-value">{{ stats.bases.A }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">T:</span>
+                            <span class="stat-value">{{ stats.bases.T }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">C:</span>
+                            <span class="stat-value">{{ stats.bases.C }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">G:</span>
+                            <span class="stat-value">{{ stats.bases.G }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">GC Content:</span>
+                            <span class="stat-value">{{ stats.gc_content }}%</span>
+                        </div>
+                        {% if stats.nanopore_risk_score is defined %}
+                        <div class="stat">
+                            <span class="stat-label">Nanopore Risk:</span>
+                            <span class="stat-value {{ 'good' if stats.nanopore_optimized else 'warning' }}">
+                                {{ stats.nanopore_risk_score }} {{ '✓' if stats.nanopore_optimized else '⚠' }}
+                            </span>
+                        </div>
+                        {% endif %}
+                        {% else %}
                         <div class="stat">
                             <span class="stat-label">A:</span>
                             <span class="stat-value">{{ encoded.count('A') }}</span>
@@ -93,25 +135,67 @@
                             <span class="stat-label">G:</span>
                             <span class="stat-value">{{ encoded.count('G') }}</span>
                         </div>
+                        {% endif %}
+                        {% if stats and stats.warnings %}
+                        <div class="warnings">
+                            <strong>Nanopore Warnings:</strong>
+                            <ul>
+                            {% for warning in stats.warnings %}
+                                <li>{{ warning }}</li>
+                            {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        {% if security_info %}
+                        <div class="security-info">
+                            <h4>🔒 Security Information</h4>
+                            <div class="security-stats">
+                                <div class="stat">
+                                    <span class="stat-label">Encryption:</span>
+                                    <span class="stat-value">{{ security_info.encryption_algorithm }}</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Key Derivation:</span>
+                                    <span class="stat-value">{{ security_info.key_derivation }}</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">PBKDF2 Iterations:</span>
+                                    <span class="stat-value">{{ security_info.pbkdf2_iterations }}</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Key Size:</span>
+                                    <span class="stat-value">{{ security_info.key_size_bits }} bits</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
             </div>
 
             <div class="info-panel encode-info">
-                <h3>How Encoding Works</h3>
-                <p>The encoding process converts your text message into a DNA sequence following these steps:</p>
-                <ol class="process-steps">
-                    <li>Convert each character to its ASCII value</li>
-                    <li>Convert ASCII values to 8-bit binary</li>
-                    <li>Map binary pairs to DNA bases (A=00, T=01, C=10, G=11)</li>
-                </ol>
-                <p class="info-note">The resulting DNA sequence can only be decoded with the correct mapping key.</p>
+                <h3>Encoding Modes</h3>
+                <div class="mode-descriptions">
+                    <div class="mode-desc">
+                        <h4>Basic Mode</h4>
+                        <p>Simple binary-to-DNA encoding (A=00, T=01, C=10, G=11). Fast and suitable for small messages.</p>
+                    </div>
+                    <div class="mode-desc">
+                        <h4>Nanopore Optimized</h4>
+                        <p>Optimized for nanopore sequencing with homopolymer avoidance, GC balancing, and error correction.</p>
+                    </div>
+                    <div class="mode-desc">
+                        <h4>Secure Mode</h4>
+                        <p>AES-256-CBC encryption combined with DNA encoding. Provides true cryptographic security with password protection.</p>
+                    </div>
+                </div>
+                <p class="info-note">Choose the mode that best fits your security and sequencing requirements.</p>
             </div>
         </div>
 
         <footer class="app-footer">
-            <p>&copy; 2023 bi0cyph3r | Advanced DNA Cryptography System</p>
+            <p>&copy; 2025 bi0cyph3r | Advanced DNA Cryptography System</p>
         </footer>
     </div>
 

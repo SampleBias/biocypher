@@ -1,27 +1,47 @@
 # bi0cyph3r - DNA Cryptography System
 
-A sophisticated, secure Flask web application that allows users to encode and decode messages using DNA cryptography with enterprise-grade security features.
+A sophisticated, secure Flask web application that allows users to encode and decode messages using DNA cryptography with enterprise-grade security features and nanopore sequencing optimization.
 
 ## Features
 
 - 🔐 **Secure Authentication**: Password hashing with Werkzeug
 - 🛡️ **Security Hardened**: CSRF protection, rate limiting, input validation
-- 🧬 **Advanced DNA Crypto**: Modular cryptography system with error handling
-- 🎨 **Modern UI**: Clean, responsive, futuristic interface
-- 📊 **Analytics**: DNA sequence statistics and insights
+- 🧬 **Advanced DNA Crypto**: Dual-mode encoding with basic and nanopore optimization
+- 🔬 **Nanopore Optimized**: Error correction, homopolymer avoidance, GC balancing
+- 🎨 **Modern UI**: Clean, responsive, futuristic interface with mode selection
+- 📊 **Analytics**: Comprehensive DNA sequence statistics and nanopore risk assessment
 - ⚡ **Performance**: Optimized code structure and error handling
-- 🧪 **Tested**: Comprehensive unit test coverage
+- 🧪 **Tested**: Comprehensive unit test coverage (17 test cases)
 - 📝 **Logging**: Detailed application logging for monitoring
 
 ## How It Works
 
-bi0cyph3r uses the four nucleotide bases (A, T, C, G) to represent binary data:
-- A = 00
-- T = 01
-- C = 10
-- G = 11
+bi0cyph3r offers three encoding modes:
 
-The application converts text to ASCII, then to binary, and finally maps the binary values to DNA bases.
+### Basic Mode
+Uses the four nucleotide bases (A, T, C, G) to represent binary data:
+- A = 00, T = 01, C = 10, G = 11
+- Converts text to ASCII, then to binary, and maps binary pairs to DNA bases
+- Fast and suitable for educational purposes and small messages
+
+### Nanopore Optimized Mode  
+Advanced encoding designed for nanopore sequencing with:
+- **Triplet Encoding**: Uses 8 homopolymer-free triplets (ATC, ATG, ACT, ACG, TAG, TAC, TCG, TCA)
+- **Error Correction**: Triple redundancy encoding with majority voting
+- **Parity Checking**: Even parity bits for error detection
+- **Homopolymer Avoidance**: Prevents problematic consecutive identical bases
+- **GC Content Balancing**: Maintains 40-60% GC content optimal for nanopore
+- **Nanopore Markers**: Special start/stop sequences for reliable sequencing
+- **Risk Assessment**: Comprehensive nanopore compatibility scoring
+
+### 🔒 Secure Mode (NEW)
+Enterprise-grade cryptographic security combined with DNA encoding:
+- **AES-256-CBC Encryption**: Military-grade encryption before DNA encoding
+- **PBKDF2 Key Derivation**: 100,000 iterations with SHA-256 for password-based encryption
+- **Password Protection**: Strong password validation and secure password generation
+- **Cryptographic Security**: True security unlike obfuscation-only approaches
+- **Nanopore Compatible**: Uses basic DNA encoding with nanopore markers for sequencing compatibility
+- **Production Ready**: Suitable for real-world secure data storage applications
 
 ## Installation
 
@@ -69,17 +89,23 @@ The application converts text to ASCII, then to binary, and finally maps the bin
 
 ```
 biocypher/
-├── app.py                 # Main Flask application
-├── dna_crypto.py         # DNA cryptography module
-├── config.py             # Configuration management
-├── test_dna_crypto.py    # Unit tests
-├── requirements.txt      # Python dependencies
-├── static/               # CSS, JS, images
-├── templates/            # HTML templates
+├── app.py                     # Main Flask application with tri-mode support
+├── dna_crypto.py             # Basic DNA cryptography module
+├── nanopore_dna_crypto.py    # Nanopore-optimized cryptography module
+├── secure_nanopore_dna_crypto.py # Secure AES+DNA cryptography module
+├── config.py                 # Configuration management
+├── test_dna_crypto.py        # Basic DNA crypto unit tests
+├── test_nanopore_dna_crypto.py # Nanopore crypto unit tests (17 test cases)
+├── test_secure_nanopore_dna_crypto.py # Secure crypto unit tests (15 test cases)
+├── requirements.txt          # Python dependencies (includes cryptography)
+├── static/                   # CSS, JS, images
+│   ├── css/style.css
+│   └── js/script.js
+├── templates/                # HTML templates with mode selection
 │   ├── login.html
 │   ├── dashboard.html
-│   ├── encode.html
-│   ├── decode.html
+│   ├── encode.html           # Updated with nanopore mode toggle
+│   ├── decode.html           # Updated with nanopore mode toggle  
 │   ├── contact.html
 │   └── error.html
 └── README.md
@@ -94,10 +120,16 @@ biocypher/
 - **📧 Contact**: Support and access requests
 - **❌ Error**: Comprehensive error handling pages
 
-## Example
+## Examples
 
+### Basic Mode
 - Input: "HELLO WORLD"
-- Encoded DNA Sequence: "ACTACAAGTAGTATGCGGCCGATGCACAGTAAT"
+- Encoded DNA: "ACTACAAGTAGTATGCGGCCGATGCACAGTAAT" (32 bases)
+
+### Nanopore Mode  
+- Input: "HELLO WORLD"
+- Encoded DNA: "ATCGATCGATCATG...TACGTAACGATGCGATATCG" (~350 bases)
+- Features: Error correction, no homopolymers, balanced GC content, nanopore markers
 
 ## Security Features
 
@@ -123,15 +155,22 @@ REDIS_URL=redis://localhost:6379  # For rate limiting (optional)
 
 ## Testing
 
-Run the unit tests to verify functionality:
+Run the comprehensive unit test suites:
 
 ```bash
-# Run DNA crypto tests  
+# Run basic DNA crypto tests  
 python test_dna_crypto.py
 
-# Run all tests with verbose output
-python -m unittest test_dna_crypto.py -v
+# Run nanopore optimization tests (17 test cases)
+python test_nanopore_dna_crypto.py
+
+# Run both test suites with verbose output
+python -m unittest test_dna_crypto.py test_nanopore_dna_crypto.py -v
 ```
+
+### Test Coverage
+- **Basic DNA Crypto**: 10 test cases covering encoding/decoding, validation, statistics
+- **Nanopore Optimization**: 17 test cases covering error correction, homopolymer avoidance, GC balancing, parity checking, risk assessment
 
 ## Production Deployment
 

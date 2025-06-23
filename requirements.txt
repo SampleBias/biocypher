@@ -6,4 +6,5 @@ itsdangerous==2.1.2
 click==8.1.7
 Flask-Limiter==3.5.0
 Flask-WTF==1.2.1
-gunicorn==21.2.0 
+gunicorn==21.2.0
+cryptography==41.0.7 

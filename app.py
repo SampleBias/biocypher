@@ -10,6 +10,8 @@ import re
 from html import escape
 
 from dna_crypto import DNACrypto, DNACryptoError
+from nanopore_dna_crypto import NanoporeDNACrypto, NanoporeDNACryptoError
+from secure_nanopore_dna_crypto import SecureNanoporeDNACrypto, SecureDNACryptoError
 from config import config
 
 # Initialize Flask app
@@ -152,20 +154,43 @@ def decode_page():
 def process_encode():
     """Process the encoding form submission"""
     message = request.form.get('message', '')
+    mode = request.form.get('mode', 'basic')
+    use_error_correction = request.form.get('error_correction') == 'on'
+    password = request.form.get('password', '')
     encoded_result = ""
     error = ""
     stats = {}
+    security_info = {}
     
     try:
         # Validate and sanitize input
         message, error = validate_and_sanitize_message(message)
         
         if not error:
-            encoded_result = DNACrypto.encode_message(message)
-            stats = DNACrypto.get_sequence_stats(encoded_result)
-            app.logger.info(f"Message encoded successfully by user {session.get('user')}")
+            if mode == 'secure':
+                if not password:
+                    error = "Password is required for secure mode"
+                else:
+                    crypto = SecureNanoporeDNACrypto()
+                    # Validate password strength
+                    password_validation = crypto.validate_password_strength(password)
+                    if not password_validation['valid']:
+                        error = f"Password too weak: {', '.join(password_validation['issues'])}"
+                    else:
+                        encoded_result = crypto.secure_encode_message(message, password, use_error_correction)
+                        security_info = crypto.get_security_info()
+                        stats = DNACrypto.get_sequence_stats(encoded_result.replace('ATCGATCG', '').replace('CGATATCG', ''))
+                        app.logger.info(f"Message encoded (secure mode) successfully by user {session.get('user')}")
+            elif mode == 'nanopore':
+                encoded_result = NanoporeDNACrypto.encode_message(message, use_error_correction)
+                stats = NanoporeDNACrypto.get_nanopore_stats(encoded_result)
+                app.logger.info(f"Message encoded (nanopore mode) successfully by user {session.get('user')}")
+            else:
+                encoded_result = DNACrypto.encode_message(message)
+                stats = DNACrypto.get_sequence_stats(encoded_result)
+                app.logger.info(f"Message encoded (basic mode) successfully by user {session.get('user')}")
     
-    except DNACryptoError as e:
+    except (DNACryptoError, NanoporeDNACryptoError, SecureDNACryptoError) as e:
         error = str(e)
         app.logger.error(f"Encoding error: {error}")
     except Exception as e:
@@ -176,7 +201,10 @@ def process_encode():
                           message=message,
                           encoded=encoded_result, 
                           error=error,
-                          stats=stats)
+                          stats=stats,
+                          security_info=security_info,
+                          mode=mode,
+                          use_error_correction=use_error_correction)
 
 @app.route('/process_decode', methods=['POST'])
 @login_required
@@ -184,20 +212,38 @@ def process_encode():
 def process_decode():
     """Process the decoding form submission"""
     sequence = request.form.get('sequence', '')
+    mode = request.form.get('mode', 'basic')
+    use_error_correction = request.form.get('error_correction') == 'on'
+    password = request.form.get('password', '')
     decoded_result = ""
     error = ""
     stats = {}
+    security_info = {}
     
     try:
         # Validate and sanitize input
         sequence, error = validate_dna_sequence(sequence)
         
         if not error:
-            decoded_result = DNACrypto.decode_sequence(sequence)
-            stats = DNACrypto.get_sequence_stats(sequence)
-            app.logger.info(f"Sequence decoded successfully by user {session.get('user')}")
+            if mode == 'secure':
+                if not password:
+                    error = "Password is required for secure mode"
+                else:
+                    crypto = SecureNanoporeDNACrypto()
+                    decoded_result = crypto.secure_decode_sequence(sequence, password, use_error_correction)
+                    security_info = crypto.get_security_info()
+                    stats = DNACrypto.get_sequence_stats(sequence.replace('ATCGATCG', '').replace('CGATATCG', ''))
+                    app.logger.info(f"Sequence decoded (secure mode) successfully by user {session.get('user')}")
+            elif mode == 'nanopore':
+                decoded_result = NanoporeDNACrypto.decode_sequence(sequence, use_error_correction)
+                stats = NanoporeDNACrypto.get_nanopore_stats(sequence)
+                app.logger.info(f"Sequence decoded (nanopore mode) successfully by user {session.get('user')}")
+            else:
+                decoded_result = DNACrypto.decode_sequence(sequence)
+                stats = DNACrypto.get_sequence_stats(sequence)
+                app.logger.info(f"Sequence decoded (basic mode) successfully by user {session.get('user')}")
     
-    except DNACryptoError as e:
+    except (DNACryptoError, NanoporeDNACryptoError, SecureDNACryptoError) as e:
         error = str(e)
         app.logger.error(f"Decoding error: {error}")
     except Exception as e:
@@ -208,7 +254,10 @@ def process_decode():
                           sequence=sequence,
                           decoded=decoded_result, 
                           error=error,
-                          stats=stats)
+                          stats=stats,
+                          security_info=security_info,
+                          mode=mode,
+                          use_error_correction=use_error_correction)
 
 @app.route('/contact')
 def contact():
