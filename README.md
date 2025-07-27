@@ -8,6 +8,7 @@ A sophisticated, secure Flask web application that allows users to encode and de
 - 🛡️ **Security Hardened**: CSRF protection, rate limiting, input validation
 - 🧬 **Advanced DNA Crypto**: Dual-mode encoding with basic and nanopore optimization
 - 🔬 **Nanopore Optimized**: Error correction, homopolymer avoidance, GC balancing
+- 🛡️ **Safety Screener**: Comprehensive biosafety analysis to prevent pathogen synthesis
 - 🎨 **Modern UI**: Clean, responsive, futuristic interface with mode selection
 - 📊 **Analytics**: Comprehensive DNA sequence statistics and nanopore risk assessment
 - ⚡ **Performance**: Optimized code structure and error handling
@@ -42,6 +43,34 @@ Enterprise-grade cryptographic security combined with DNA encoding:
 - **Cryptographic Security**: True security unlike obfuscation-only approaches
 - **Nanopore Compatible**: Uses basic DNA encoding with nanopore markers for sequencing compatibility
 - **Production Ready**: Suitable for real-world secure data storage applications
+
+## 🛡️ Safety Screener (NEW)
+
+The integrated DNA Safety Screener provides comprehensive biosafety analysis to prevent inadvertent synthesis of potentially harmful sequences:
+
+### Safety Analysis Features
+- **🦠 Pathogen Detection**: Screens for viral polymerase, toxin genes, antibiotic resistance, and virulence factors
+- **🧬 Natural Occurrence Check**: Detects sequences from housekeeping genes, E. coli, and human genomes
+- **📊 Sequence Analysis**: Evaluates GC content, ORFs, homopolymer runs, and repetitive elements
+- **⚠️ Risk Assessment**: Provides LOW/MEDIUM/HIGH risk classification with detailed explanations
+- **💡 Recommendations**: Clear guidance on synthesis safety with specific warnings
+
+### Safety Status Indicators
+- **✅ SAFE (Green)**: No risks detected - approved for synthesis
+- **⚠️ CAUTION (Orange)**: Some concerns found - review carefully before synthesis
+- **❌ UNSAFE (Red)**: Do not synthesize - potential pathogen or harmful sequence detected
+
+### How Safety Screening Works
+1. **Encode your message** using any of the three DNA cryptography modes
+2. **Click the "🛡️ Safety Screen" button** next to the Copy button
+3. **Review the comprehensive report** showing:
+   - Overall safety status with color-coded indicator
+   - Detailed pathogen analysis with signature matches
+   - Natural genome occurrence check
+   - Sequence characteristics and warnings
+   - Specific recommendations for safe synthesis
+
+The safety screener uses pattern matching against known pathogen signatures and natural sequences to identify potentially problematic DNA sequences before synthesis.
 
 ## Installation
 
@@ -85,26 +114,33 @@ Enterprise-grade cryptographic security combined with DNA encoding:
      - Username: `demo`
      - Password: `password123`
 
+8. **Test the Safety Screener**
+   - Go to the Encode page
+   - Enter any message and encode it
+   - Click the "🛡️ Safety Screen" button
+   - Review the comprehensive safety analysis report
+
 ## Project Structure
 
 ```
 biocypher/
-├── app.py                     # Main Flask application with tri-mode support
+├── app.py                     # Main Flask application with tri-mode support + safety API
 ├── dna_crypto.py             # Basic DNA cryptography module
 ├── nanopore_dna_crypto.py    # Nanopore-optimized cryptography module
 ├── secure_nanopore_dna_crypto.py # Secure AES+DNA cryptography module
+├── safety_screener.py        # DNA safety screening and pathogen detection (NEW)
 ├── config.py                 # Configuration management
 ├── test_dna_crypto.py        # Basic DNA crypto unit tests
 ├── test_nanopore_dna_crypto.py # Nanopore crypto unit tests (17 test cases)
 ├── test_secure_nanopore_dna_crypto.py # Secure crypto unit tests (15 test cases)
 ├── requirements.txt          # Python dependencies (includes cryptography)
 ├── static/                   # CSS, JS, images
-│   ├── css/style.css
-│   └── js/script.js
+│   ├── css/style.css         # Updated with safety screener styling
+│   └── js/script.js          # Updated with safety screening functionality
 ├── templates/                # HTML templates with mode selection
 │   ├── login.html
 │   ├── dashboard.html
-│   ├── encode.html           # Updated with nanopore mode toggle
+│   ├── encode.html           # Updated with safety screening UI
 │   ├── decode.html           # Updated with nanopore mode toggle  
 │   ├── contact.html
 │   └── error.html
@@ -115,21 +151,41 @@ biocypher/
 
 - **🔐 Login**: Secure authentication with hashed passwords
 - **📊 Dashboard**: Central navigation with system overview
-- **📝 Encode**: Convert messages to DNA with validation & stats
+- **📝 Encode**: Convert messages to DNA with validation, stats & safety screening
 - **🧬 Decode**: Translate DNA sequences with error handling
 - **📧 Contact**: Support and access requests
 - **❌ Error**: Comprehensive error handling pages
+
+## API Endpoints
+
+- **POST /api/encode**: Programmatic DNA encoding
+- **POST /api/decode**: Programmatic DNA decoding  
+- **POST /api/safety_screen**: Comprehensive DNA safety analysis (NEW)
 
 ## Examples
 
 ### Basic Mode
 - Input: "HELLO WORLD"
 - Encoded DNA: "ACTACAAGTAGTATGCGGCCGATGCACAGTAAT" (32 bases)
+- Safety Status: ✅ SAFE (typical result for encoded messages)
 
 ### Nanopore Mode  
 - Input: "HELLO WORLD"
 - Encoded DNA: "ATCGATCGATCATG...TACGTAACGATGCGATATCG" (~350 bases)
 - Features: Error correction, no homopolymers, balanced GC content, nanopore markers
+- Safety Status: ✅ SAFE (optimized sequences are typically safe)
+
+### Safety Screening Workflow
+1. **Encode Message**: "Hello DNA World" → `TACATCTTTCGATCGATCGGACAATTTGTCGGTGACTCGATCTA`
+2. **Click Safety Screen**: Analysis begins with loading animation
+3. **View Results**: 
+   ```
+   ✅ SAFE
+   📊 Sequence Analysis: 44 bases, 45.45% GC content
+   🦠 Pathogen Risk: No signatures detected
+   🧬 Natural Occurrence: No matches found
+   💡 Recommendations: Sequence appears safe for synthesis
+   ```
 
 ## Security Features
 
