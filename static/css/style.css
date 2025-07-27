@@ -827,6 +827,213 @@ textarea:focus {
     }
 }
 
+/* Safety Screening Styles */
+.result-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+.safety-screen-btn {
+    background: linear-gradient(45deg, var(--warning-color), #ffa726);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(255, 152, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.safety-screen-btn:hover {
+    background: linear-gradient(45deg, #f57c00, var(--warning-color));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+}
+
+.safety-screen-btn:active {
+    transform: translateY(0);
+}
+
+.safety-screen-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.safety-screen-btn.loading {
+    pointer-events: none;
+}
+
+.safety-screen-btn.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.safety-results {
+    margin-top: 2rem;
+    padding: 2rem;
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.safety-results h4 {
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    font-size: 1.3rem;
+    text-align: center;
+}
+
+.safety-status {
+    text-align: center;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.safety-status.safe {
+    background: linear-gradient(45deg, var(--success-color), #66bb6a);
+    color: white;
+    border: 2px solid var(--success-color);
+}
+
+.safety-status.caution {
+    background: linear-gradient(45deg, var(--warning-color), #ffb74d);
+    color: white;
+    border: 2px solid var(--warning-color);
+}
+
+.safety-status.unsafe {
+    background: linear-gradient(45deg, var(--error-color), #ef5350);
+    color: white;
+    border: 2px solid var(--error-color);
+}
+
+.safety-details {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.safety-section {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.safety-section h5 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.safety-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.safety-item {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.safety-item .label {
+    font-weight: 600;
+    color: var(--primary-color);
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.safety-item .value {
+    color: var(--light-color);
+}
+
+.recommendations {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--info-color);
+}
+
+.recommendations h5 {
+    color: var(--info-color);
+    margin-bottom: 1rem;
+}
+
+.recommendations ul {
+    list-style: none;
+    padding: 0;
+}
+
+.recommendations li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recommendations li:last-child {
+    border-bottom: none;
+}
+
+.match-list {
+    max-height: 200px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+}
+
+.match-item {
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+}
+
+.match-item:last-child {
+    margin-bottom: 0;
+}
+
+.risk-high {
+    color: var(--error-color) !important;
+    font-weight: 600;
+}
+
+.risk-medium {
+    color: var(--warning-color) !important;
+    font-weight: 600;
+}
+
+.risk-low {
+    color: var(--success-color) !important;
+    font-weight: 600;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .app-nav {

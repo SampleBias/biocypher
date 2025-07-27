@@ -23,6 +23,7 @@ from html import escape
 from dna_crypto import DNACrypto, DNACryptoError
 from nanopore_dna_crypto import NanoporeDNACrypto, NanoporeDNACryptoError
 from secure_nanopore_dna_crypto import SecureNanoporeDNACrypto, SecureDNACryptoError
+from safety_screener import DNASafetyScreener, SafetyScreenerError
 from config import config
 
 # Initialize Flask app
@@ -302,6 +303,36 @@ def api_decode():
     
     decoded = decode_sequence(sequence)
     return jsonify({'decoded': decoded})
+
+@app.route('/api/safety_screen', methods=['POST'])
+@login_required
+@limiter.limit("5 per minute")
+def api_safety_screen():
+    """API endpoint for safety screening DNA sequences"""
+    try:
+        data = request.get_json()
+        sequence = data.get('sequence', '')
+        
+        if not sequence:
+            return jsonify({'error': 'No DNA sequence provided'}), 400
+        
+        # Perform safety screening
+        safety_report = DNASafetyScreener.perform_comprehensive_screening(sequence)
+        
+        # Log safety screening activity
+        app.logger.info(f"Safety screening performed by user {session.get('user')} - Status: {safety_report['safety_status']}")
+        
+        return jsonify({
+            'success': True,
+            'report': safety_report
+        })
+        
+    except SafetyScreenerError as e:
+        app.logger.error(f"Safety screening error: {str(e)}")
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        app.logger.error(f"Unexpected safety screening error: {str(e)}")
+        return jsonify({'error': 'An unexpected error occurred during safety screening'}), 500
 
 # Error handlers
 @app.errorhandler(404)

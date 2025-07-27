@@ -81,7 +81,21 @@
                     <h3>Encoded DNA Sequence:</h3>
                     <div class="result">
                         <p id="encoded-result">{{ encoded }}</p>
-                        <button class="copy-btn" data-target="encoded-result">Copy</button>
+                        <div class="result-actions">
+                            <button class="copy-btn" data-target="encoded-result">Copy</button>
+                            <button class="safety-screen-btn" id="safety-screen-btn" data-sequence="{{ encoded }}">🛡️ Safety Screen</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Safety Screening Results -->
+                    <div class="safety-results" id="safety-results" style="display: none;">
+                        <h4>🛡️ Safety Screening Report</h4>
+                        <div class="safety-status" id="safety-status">
+                            <!-- Safety status will be populated by JavaScript -->
+                        </div>
+                        <div class="safety-details" id="safety-details">
+                            <!-- Detailed results will be populated by JavaScript -->
+                        </div>
                     </div>
                     
                     <div class="result-stats">
