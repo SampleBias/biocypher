@@ -9,14 +9,12 @@ This software is for personal, educational, and research use only.
 Commercial use requires explicit written permission.
 """
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
-from werkzeug.security import check_password_hash, generate_password_hash
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
 import os
 import logging
-from functools import wraps
 import re
 from html import escape
 
@@ -55,21 +53,6 @@ def create_app(config_name=None):
     return app, limiter, csrf
 
 app, limiter, csrf = create_app()
-
-# Secure user authentication with hashed passwords
-USERS = {
-    'demo': generate_password_hash('password123')
-}
-
-# Login required decorator
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user' not in session:
-            flash('Please log in to access this page', 'error')
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 def validate_and_sanitize_message(message):
     """Validate and sanitize input message"""
@@ -114,54 +97,25 @@ def validate_dna_sequence(sequence):
 
 @app.route('/')
 def index():
-    """Landing page with login form"""
-    if 'user' in session:
-        return redirect(url_for('dashboard'))
-    return render_template('login.html')
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    """Handle user login"""
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        if username in USERS and check_password_hash(USERS[username], password):
-            session['user'] = username
-            flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid username or password', 'error')
-    
-    return render_template('login.html')
-
-@app.route('/logout')
-def logout():
-    """Handle user logout"""
-    session.pop('user', None)
-    flash('You have been logged out', 'info')
-    return redirect(url_for('index'))
+    """Landing page - redirect to dashboard"""
+    return redirect(url_for('dashboard'))
 
 @app.route('/dashboard')
-@login_required
 def dashboard():
-    """Main dashboard after login"""
-    return render_template('dashboard.html', username=session.get('user'))
+    """Main dashboard"""
+    return render_template('dashboard.html')
 
 @app.route('/encode')
-@login_required
 def encode_page():
     """Page for encoding messages to DNA"""
     return render_template('encode.html')
 
 @app.route('/decode')
-@login_required
 def decode_page():
     """Page for decoding DNA to messages"""
     return render_template('decode.html')
 
 @app.route('/process_encode', methods=['POST'])
-@login_required
 @limiter.limit("10 per minute")
 def process_encode():
     """Process the encoding form submission"""
@@ -192,15 +146,15 @@ def process_encode():
                         encoded_result = crypto.secure_encode_message(message, password, use_error_correction)
                         security_info = crypto.get_security_info()
                         stats = DNACrypto.get_sequence_stats(encoded_result.replace('ATCGATCG', '').replace('CGATATCG', ''))
-                        app.logger.info(f"Message encoded (secure mode) successfully by user {session.get('user')}")
+                        app.logger.info(f"Message encoded (secure mode) successfully")
             elif mode == 'nanopore':
                 encoded_result = NanoporeDNACrypto.encode_message(message, use_error_correction)
                 stats = NanoporeDNACrypto.get_nanopore_stats(encoded_result)
-                app.logger.info(f"Message encoded (nanopore mode) successfully by user {session.get('user')}")
+                app.logger.info(f"Message encoded (nanopore mode) successfully")
             else:
                 encoded_result = DNACrypto.encode_message(message)
                 stats = DNACrypto.get_sequence_stats(encoded_result)
-                app.logger.info(f"Message encoded (basic mode) successfully by user {session.get('user')}")
+                app.logger.info(f"Message encoded (basic mode) successfully")
     
     except (DNACryptoError, NanoporeDNACryptoError, SecureDNACryptoError) as e:
         error = str(e)
@@ -219,7 +173,6 @@ def process_encode():
                           use_error_correction=use_error_correction)
 
 @app.route('/process_decode', methods=['POST'])
-@login_required
 @limiter.limit("10 per minute")
 def process_decode():
     """Process the decoding form submission"""
@@ -245,15 +198,15 @@ def process_decode():
                     decoded_result = crypto.secure_decode_sequence(sequence, password, use_error_correction)
                     security_info = crypto.get_security_info()
                     stats = DNACrypto.get_sequence_stats(sequence.replace('ATCGATCG', '').replace('CGATATCG', ''))
-                    app.logger.info(f"Sequence decoded (secure mode) successfully by user {session.get('user')}")
+                    app.logger.info(f"Sequence decoded (secure mode) successfully")
             elif mode == 'nanopore':
                 decoded_result = NanoporeDNACrypto.decode_sequence(sequence, use_error_correction)
                 stats = NanoporeDNACrypto.get_nanopore_stats(sequence)
-                app.logger.info(f"Sequence decoded (nanopore mode) successfully by user {session.get('user')}")
+                app.logger.info(f"Sequence decoded (nanopore mode) successfully")
             else:
                 decoded_result = DNACrypto.decode_sequence(sequence)
                 stats = DNACrypto.get_sequence_stats(sequence)
-                app.logger.info(f"Sequence decoded (basic mode) successfully by user {session.get('user')}")
+                app.logger.info(f"Sequence decoded (basic mode) successfully")
     
     except (DNACryptoError, NanoporeDNACryptoError, SecureDNACryptoError) as e:
         error = str(e)
@@ -277,7 +230,6 @@ def contact():
     return render_template('contact.html')
 
 @app.route('/api/encode', methods=['POST'])
-@login_required
 def api_encode():
     """API endpoint for encoding"""
     data = request.get_json()
@@ -285,11 +237,15 @@ def api_encode():
     if not message:
         return jsonify({'error': 'No message provided'}), 400
     
-    encoded = encode_message(message)
+    # Validate message
+    message, error = validate_and_sanitize_message(message)
+    if error:
+        return jsonify({'error': error}), 400
+    
+    encoded = DNACrypto.encode_message(message)
     return jsonify({'encoded': encoded})
 
 @app.route('/api/decode', methods=['POST'])
-@login_required
 def api_decode():
     """API endpoint for decoding"""
     data = request.get_json()
@@ -298,14 +254,14 @@ def api_decode():
         return jsonify({'error': 'No DNA sequence provided'}), 400
     
     # Validate sequence
-    if not all(base in 'ATCG' for base in sequence):
-        return jsonify({'error': 'Invalid DNA sequence. Only A, T, C, G are allowed.'}), 400
+    sequence, error = validate_dna_sequence(sequence)
+    if error:
+        return jsonify({'error': error}), 400
     
-    decoded = decode_sequence(sequence)
+    decoded = DNACrypto.decode_sequence(sequence)
     return jsonify({'decoded': decoded})
 
 @app.route('/api/safety_screen', methods=['POST'])
-@login_required
 @limiter.limit("5 per minute")
 def api_safety_screen():
     """API endpoint for safety screening DNA sequences"""
@@ -320,7 +276,7 @@ def api_safety_screen():
         safety_report = DNASafetyScreener.perform_comprehensive_screening(sequence)
         
         # Log safety screening activity
-        app.logger.info(f"Safety screening performed by user {session.get('user')} - Status: {safety_report['safety_status']}")
+        app.logger.info(f"Safety screening performed - Status: {safety_report['safety_status']}")
         
         return jsonify({
             'success': True,

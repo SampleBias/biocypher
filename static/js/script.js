@@ -63,31 +63,56 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Copy button functionality
+    // Copy button functionality with modern Clipboard API
     const copyButtons = document.querySelectorAll('.copy-btn');
     copyButtons.forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', async function() {
             const targetId = this.getAttribute('data-target');
             const targetElement = document.getElementById(targetId);
             
             if (targetElement) {
-                // Create a temporary textarea element to copy the text
-                const textarea = document.createElement('textarea');
-                textarea.value = targetElement.textContent;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                
-                // Change button text temporarily to indicate success
+                const textToCopy = targetElement.textContent.trim();
                 const originalText = this.textContent;
-                this.textContent = 'Copied!';
-                this.style.background = 'var(--success-color)';
+                const originalBg = this.style.background;
                 
-                setTimeout(() => {
-                    this.textContent = originalText;
-                    this.style.background = '';
-                }, 2000);
+                try {
+                    // Use modern Clipboard API
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(textToCopy);
+                    } else {
+                        // Fallback for older browsers
+                        const textarea = document.createElement('textarea');
+                        textarea.value = textToCopy;
+                        textarea.style.position = 'fixed';
+                        textarea.style.opacity = '0';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                    }
+                    
+                    // Show success feedback
+                    this.textContent = '✓ Copied!';
+                    this.style.background = 'var(--success-color)';
+                    this.style.color = 'white';
+                    
+                    setTimeout(() => {
+                        this.textContent = originalText;
+                        this.style.background = originalBg;
+                        this.style.color = '';
+                    }, 2000);
+                } catch (err) {
+                    // Show error feedback
+                    this.textContent = '✗ Failed';
+                    this.style.background = 'var(--error-color)';
+                    this.style.color = 'white';
+                    
+                    setTimeout(() => {
+                        this.textContent = originalText;
+                        this.style.background = originalBg;
+                        this.style.color = '';
+                    }, 2000);
+                }
             }
         });
     });
@@ -141,24 +166,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
 
-    // Add futuristic typing effect to the header on login page
-    const loginHeader = document.querySelector('.login-header h1');
-    if (loginHeader) {
-        const text = loginHeader.innerHTML;
-        loginHeader.innerHTML = '';
-        
-        let i = 0;
-        const typeWriter = () => {
-            if (i < text.length) {
-                loginHeader.innerHTML += text.charAt(i);
-                i++;
-                setTimeout(typeWriter, 100);
-            }
-        };
-        
-        // Enable typing effect for login page
-        typeWriter();
-    }
 
     // Form options functionality
     const includeSpacesCheckbox = document.querySelector('input[name="include_spaces"]');

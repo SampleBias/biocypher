@@ -486,5 +486,248 @@ def validate(ctx, sequence, input_file):
         OutputFormatter.print_error("Validation failed", str(e))
         sys.exit(1)
 
+# Session state management
+class BioCypherSession:
+    """Manages interactive session state"""
+    def __init__(self):
+        self.original_message = None
+        self.encoded_sequence = None
+        self.encoding_mode = None
+        self.encoding_options = {}
+        self.analysis_cache = {}
+        self.active = False
+    
+    def encode_and_activate(self, message: str, mode: str = 'basic', **options):
+        """Encode message and activate session"""
+        self.original_message = message
+        self.encoding_mode = mode
+        self.encoding_options = options
+        
+        # Perform encoding based on mode
+        if mode == 'secure':
+            password = options.get('password')
+            if not password:
+                password = get_password_securely("Enter password for secure encoding: ")
+            crypto = SecureNanoporeDNACrypto()
+            self.encoded_sequence = crypto.secure_encode_message(
+                message, password, options.get('error_correction', True)
+            )
+        elif mode == 'nanopore':
+            self.encoded_sequence = NanoporeDNACrypto.encode_message(
+                message, options.get('error_correction', True)
+            )
+        else:  # basic mode
+            self.encoded_sequence = DNACrypto.encode_message(message)
+        
+        self.active = True
+        return self.encoded_sequence
+    
+    def reset(self):
+        """Reset session for new encoding"""
+        self.__init__()
+
+@cli.command()
+@click.pass_context
+def interactive(ctx):
+    """🎮 Start interactive BioCypher session"""
+    session = BioCypherSession()
+    
+    console.print("\n🧬 [bold green]BioCypher Interactive Session Started[/bold green]")
+    console.print("💡 [dim]Encode a message to begin, then use analyze, safety, stats, export, etc.[/dim]")
+    console.print("📋 [dim]Type 'help' for commands or 'exit' to quit[/dim]\n")
+    
+    try:
+        while True:
+            try:
+                # Create prompt based on session state
+                if not session.active:
+                    prompt_text = "[bold blue]biocypher[/bold blue]> "
+                else:
+                    mode_indicator = f"[dim]({session.encoding_mode})[/dim]"
+                    prompt_text = f"[bold green]biocypher[/bold green]{mode_indicator}> "
+                
+                command = console.input(prompt_text).strip()
+                
+                if not command:
+                    continue
+                
+                # Parse command
+                parts = command.split()
+                cmd = parts[0].lower()
+                
+                if cmd == 'exit':
+                    console.print("👋 [yellow]BioCypher session ended[/yellow]")
+                    break
+                
+                elif cmd == 'help':
+                    show_interactive_help(session)
+                
+                elif cmd == 'encode':
+                    if len(parts) < 2:
+                        message = console.input("Enter message to encode: ").strip()
+                    else:
+                        message = ' '.join(parts[1:]).strip('"\'')
+                    
+                    if not message:
+                        console.print("❌ [red]No message provided[/red]")
+                        continue
+                    
+                    # Get encoding mode
+                    mode = 'basic'
+                    if len(parts) > 2 and parts[1] in ['-m', '--mode']:
+                        mode = parts[2] if len(parts) > 2 else 'basic'
+                        message = ' '.join(parts[3:]).strip('"\'')
+                    
+                    with console.status("🧬 Encoding message..."):
+                        session.encode_and_activate(message, mode)
+                    
+                    console.print(f"\n✅ [green]Message encoded successfully using {mode} mode[/green]")
+                    
+                    # Display encoded sequence
+                    dna_formatted = DNAFormatter.format_dna_sequence(session.encoded_sequence)
+                    console.print("\n📊 [bold]Encoded DNA Sequence:[/bold]")
+                    console.print(dna_formatted)
+                    
+                    console.print(f"\n📏 Sequence length: {len(session.encoded_sequence):,} bases")
+                    console.print(f"📝 Original message: {session.original_message}")
+                    
+                    # Show suggestions
+                    console.print("\n💡 [dim]Available commands: analyze, safety, stats, export, new, decode, help, exit[/dim]")
+                
+                elif cmd == 'analyze':
+                    if not session.active:
+                        console.print("❌ [red]No active sequence. Use 'encode' first.[/red]")
+                        continue
+                    
+                    with console.status("📊 Analyzing sequence..."):
+                        if session.encoding_mode == 'nanopore':
+                            stats = NanoporeDNACrypto.get_nanopore_stats(session.encoded_sequence)
+                        else:
+                            stats = DNACrypto.get_sequence_stats(session.encoded_sequence)
+                    
+                    console.print(f"\n📊 [bold]DNA Sequence Analysis ({session.encoding_mode} mode)[/bold]")
+                    console.print(DNAFormatter.format_sequence_stats(stats))
+                    
+                    session.analysis_cache['analyze'] = stats
+                
+                elif cmd == 'safety':
+                    if not session.active:
+                        console.print("❌ [red]No active sequence. Use 'encode' first.[/red]")
+                        continue
+                    
+                    with console.status("🛡️ Performing safety screening..."):
+                        report = DNASafetyScreener.perform_comprehensive_screening(session.encoded_sequence)
+                    
+                    console.print()
+                    SafetyFormatter.format_safety_report(report)
+                    
+                    session.analysis_cache['safety'] = report
+                
+                elif cmd == 'stats':
+                    if not session.active:
+                        console.print("❌ [red]No active sequence. Use 'encode' first.[/red]")
+                        continue
+                    
+                    console.print(f"\n📊 [bold]Session Statistics[/bold]")
+                    console.print(f"📝 Message: {session.original_message}")
+                    console.print(f"📏 Message length: {len(session.original_message)} characters")
+                    console.print(f"🧬 DNA sequence length: {len(session.encoded_sequence):,} bases")
+                    console.print(f"🔧 Encoding mode: {session.encoding_mode}")
+                    console.print(f"📋 Cached analyses: {', '.join(session.analysis_cache.keys()) or 'none'}")
+                
+                elif cmd == 'export':
+                    if not session.active:
+                        console.print("❌ [red]No active sequence. Use 'encode' first.[/red]")
+                        continue
+                    
+                    if len(parts) < 2:
+                        filename = console.input("Enter filename to save sequence: ").strip()
+                    else:
+                        filename = parts[1]
+                    
+                    if filename:
+                        write_file_content(filename, session.encoded_sequence, 'text')
+                        console.print(f"💾 [green]Sequence saved to {filename}[/green]")
+                
+                elif cmd == 'new':
+                    session.reset()
+                    console.print("🔄 [yellow]Session reset. Ready for new encoding.[/yellow]")
+                
+                elif cmd == 'decode':
+                    if len(parts) < 2:
+                        sequence = console.input("Enter DNA sequence to decode: ").strip()
+                    else:
+                        sequence = ' '.join(parts[1:]).strip('"\'')
+                    
+                    if not sequence:
+                        console.print("❌ [red]No sequence provided[/red]")
+                        continue
+                    
+                    # Validate sequence
+                    is_valid, error_msg = validate_dna_sequence(sequence)
+                    if not is_valid:
+                        console.print(f"❌ [red]Invalid DNA sequence: {error_msg}[/red]")
+                        continue
+                    
+                    # Auto-detect mode
+                    mode = detect_encoding_mode(sequence)
+                    
+                    try:
+                        if mode == 'secure':
+                            password = get_password_securely("Enter password for decoding: ")
+                            crypto = SecureNanoporeDNACrypto()
+                            decoded = crypto.secure_decode_sequence(sequence, password, True)
+                        elif mode == 'nanopore':
+                            decoded = NanoporeDNACrypto.decode_sequence(sequence, True)
+                        else:
+                            decoded = DNACrypto.decode_sequence(sequence)
+                        
+                        console.print(f"\n✅ [green]Decoded using {mode} mode:[/green]")
+                        console.print(f"📝 [bold]{decoded}[/bold]")
+                        
+                    except Exception as e:
+                        console.print(f"❌ [red]Decoding failed: {str(e)}[/red]")
+                
+                else:
+                    console.print(f"❌ [red]Unknown command: {cmd}[/red]")
+                    console.print("💡 [dim]Type 'help' for available commands[/dim]")
+            
+            except EOFError:
+                break
+            except KeyboardInterrupt:
+                if OutputFormatter.confirm("\n🛑 Exit BioCypher session?", default=False):
+                    break
+                console.print()  # New line after interrupt
+    
+    except Exception as e:
+        console.print(f"❌ [red]Session error: {str(e)}[/red]")
+        if ctx.obj.get('verbose'):
+            import traceback
+            console.print(traceback.format_exc())
+
+def show_interactive_help(session):
+    """Show help for interactive session"""
+    console.print("\n📋 [bold]BioCypher Interactive Commands[/bold]")
+    
+    if not session.active:
+        console.print("\n🧬 [yellow]Encoding Commands (start here):[/yellow]")
+        console.print("  encode MESSAGE              Encode message using basic mode")
+        console.print("  encode -m MODE MESSAGE      Encode with specific mode (basic/nanopore/secure)")
+    else:
+        console.print(f"\n📊 [green]Analysis Commands (sequence active: {session.encoding_mode} mode):[/green]")
+        console.print("  analyze                     Analyze DNA sequence characteristics")
+        console.print("  safety                      Perform safety screening")
+        console.print("  stats                       Show session statistics")
+        console.print("  export FILENAME             Save sequence to file")
+    
+    console.print("\n🔧 [blue]Utility Commands:[/blue]")
+    console.print("  decode SEQUENCE             Decode any DNA sequence (one-off)")
+    console.print("  new                         Reset session for new encoding")
+    console.print("  help                        Show this help message")
+    console.print("  exit                        Exit interactive session")
+    
+    console.print("\n💡 [dim]Example workflow:[/dim]")
+    console.print("  [dim]encode \"secret message\" → analyze → safety → export secret.dna[/dim]")
+
 if __name__ == '__main__':
     cli()

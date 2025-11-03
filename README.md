@@ -4,12 +4,11 @@ A sophisticated, secure Flask web application that allows users to encode and de
 
 ## Features
 
-- 🔐 **Secure Authentication**: Password hashing with Werkzeug
 - 🛡️ **Security Hardened**: CSRF protection, rate limiting, input validation
-- 🧬 **Advanced DNA Crypto**: Dual-mode encoding with basic and nanopore optimization
+- 🧬 **Advanced DNA Crypto**: Three-mode encoding with basic, nanopore, and secure options
 - 🔬 **Nanopore Optimized**: Error correction, homopolymer avoidance, GC balancing
 - 🛡️ **Safety Screener**: Comprehensive biosafety analysis to prevent pathogen synthesis
-- 🎨 **Modern UI**: Clean, responsive, futuristic interface with mode selection
+- 🎨 **Modern UI**: Clean, responsive, modern interface with mode selection
 - 📊 **Analytics**: Comprehensive DNA sequence statistics and nanopore risk assessment
 - ⚡ **Performance**: Optimized code structure and error handling
 - 🧪 **Tested**: Comprehensive unit test coverage (17 test cases)
@@ -110,9 +109,7 @@ The safety screener uses pattern matching against known pathogen signatures and 
 
 7. **Access the application**
    - Open `http://127.0.0.1:5000/`
-   - Login with demo credentials:
-     - Username: `demo`
-     - Password: `password123`
+   - The application will redirect to the dashboard automatically
 
 8. **Test the Safety Screener**
    - Go to the Encode page
@@ -138,7 +135,6 @@ biocypher/
 │   ├── css/style.css         # Updated with safety screener styling
 │   └── js/script.js          # Updated with safety screening functionality
 ├── templates/                # HTML templates with mode selection
-│   ├── login.html
 │   ├── dashboard.html
 │   ├── encode.html           # Updated with safety screening UI
 │   ├── decode.html           # Updated with nanopore mode toggle  
@@ -149,7 +145,6 @@ biocypher/
 
 ## Application Pages
 
-- **🔐 Login**: Secure authentication with hashed passwords
 - **📊 Dashboard**: Central navigation with system overview
 - **📝 Encode**: Convert messages to DNA with validation, stats & safety screening
 - **🧬 Decode**: Translate DNA sequences with error handling
@@ -189,11 +184,9 @@ biocypher/
 
 ## Security Features
 
-- **Password Hashing**: Uses Werkzeug for secure password storage
 - **Rate Limiting**: Prevents abuse with configurable limits
 - **Input Validation**: Comprehensive sanitization and validation
 - **CSRF Protection**: Protects against cross-site request forgery
-- **Session Security**: Secure session configuration
 - **Error Handling**: Safe error messages without information leakage
 - **Logging**: Security events monitoring
 
