@@ -2,6 +2,10 @@
 
 A powerful command-line tool for encoding text messages into DNA sequences and decoding them back, with multiple encoding modes and advanced features.
 
+## 📋 Protocol Specification
+
+**For implementers**: See [../PROTOCOL_SPECIFICATION.md](../PROTOCOL_SPECIFICATION.md) for the complete formal protocol specification, including exact encoding algorithms, sequence formats, and conformance requirements.
+
 ## ✨ Features
 
 - **Multiple Encoding Modes**:

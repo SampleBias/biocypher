@@ -2,6 +2,16 @@
 
 A sophisticated, secure Flask web application that allows users to encode and decode messages using DNA cryptography with enterprise-grade security features and nanopore sequencing optimization.
 
+## 📋 Protocol Specification
+
+**For implementers and developers**: See [PROTOCOL_SPECIFICATION.md](PROTOCOL_SPECIFICATION.md) for the complete formal protocol specification, including:
+- Exact encoding/decoding algorithms
+- Sequence format definitions
+- Error handling specifications
+- Test vectors and conformance requirements
+
+This specification enables interoperability - any compliant implementation can encode/decode BioCypher sequences.
+
 ## Features
 
 - 🛡️ **Security Hardened**: CSRF protection, rate limiting, input validation
@@ -127,6 +137,7 @@ biocypher/
 ├── secure_nanopore_dna_crypto.py # Secure AES+DNA cryptography module
 ├── safety_screener.py        # DNA safety screening and pathogen detection (NEW)
 ├── config.py                 # Configuration management
+├── PROTOCOL_SPECIFICATION.md # Formal protocol specification (for implementers)
 ├── test_dna_crypto.py        # Basic DNA crypto unit tests
 ├── test_nanopore_dna_crypto.py # Nanopore crypto unit tests (17 test cases)
 ├── test_secure_nanopore_dna_crypto.py # Secure crypto unit tests (15 test cases)
