@@ -1,0 +1,33 @@
+[package]
+name = "biocypher-backend"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Workspace dependencies
+tokio = { workspace = true }
+actix-web = { workspace = true }
+actix-cors = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+aes = { workspace = true }
+cbc = { workspace = true }
+pbkdf2 = { workspace = true }
+base64 = { workspace = true }
+sha2 = { workspace = true }
+rand = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+regex = { workspace = true }
+hex = { workspace = true }
+
+# Additional dependencies
+validator = { version = "0.16", features = ["derive"] }
+derive_more = { version = "0.99", features = ["display", "error"] }
+
+[dev-dependencies]
+mockall = { workspace = true }
