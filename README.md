@@ -1,355 +1,267 @@
-# BioCypher Rust + Solana Migration Project
+# BioCypher
 
-## 🎯 Project Overview
+**DNA Cryptography System** — Encode and decode messages as DNA sequences with optional blockchain verification.
 
-**Objective**: Convert BioCypher DNA cryptography system from Python/Flask to Rust backend services with Solana blockchain integration
-
-**Status**: ✅ **PLANNING COMPLETE - READY TO BUILD**
-
-**Timeline**: 7 weeks to production
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
 
-## 📋 Quick Answer to Your Question
+## Overview
 
-**Q:** "Can you review this project and develop a plan to convert this to Rust backend services and also have this run on solana for a backend with Rust native, this will include encoding being handled as a smart program on solana and also the decoding steps as smart programs on solana"
+BioCypher is a DNA-based encoding system for storing and transmitting digital data. It supports three encoding modes optimized for different use cases:
 
-**A:** **YES, absolutely!** We've developed a comprehensive plan for a **hybrid architecture**:
-
-- ✅ **Rust backend** handles fast DNA operations (off-chain)
-- ✅ **Solana smart programs** handle encoding/decoding on-chain (verifiable)
-- ✅ **UI integration** via React/TypeScript with optional blockchain features
-
-This gives you the best of both worlds: speed when you need it, blockchain verification when you want it.
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| **Basic** | Simple binary→DNA mapping (00=A, 01=T, 10=C, 11=G) | Educational, simple encoding |
+| **Nanopore** | Triplet encoding, error correction, GC balancing, homopolymer avoidance | Nanopore sequencing optimization |
+| **Secure** | AES-256-CBC encryption + DNA encoding | Secure data storage |
 
 ---
 
-## 🏗️ Architecture
+## Project Status
 
-```
-┌─────────────────────────────────┐
-│         UI (React/TypeScript)   │
-└────────────┬────────────────────┘
-             │ HTTP API
-             ▼
-┌─────────────────────────────────┐
-│      Rust Backend (Actix-web)    │
-│                                 │
-│  • DNA Encoding/Decoding        │  ← Fast (10-50ms)
-│  • Safety Screening             │  ← Fast (50-100ms)
-│  • Solana Client Wrapper        │  ← Optional blockchain
-│  • Caching (Redis)              │
-└────────────┬────────────────────┘
-             │
-      ┌──────┴──────┐
-      │             │
-      ▼             ▼
-┌──────────┐  ┌─────────────┐
-│  Solana  │  │ Off-chain   │
-│Programs  │  │ Processing  │
-│          │  │   (Fast)    │
-│  Encode  │  └─────────────┘
-│  Decode  │
-│  Safety  │
-└──────────┘
+| Component | Status |
+|-----------|--------|
+| **Rust Backend** | ✅ Complete (Phase 1) |
+| **Basic DNA Mode** | ✅ Implemented |
+| **Nanopore DNA Mode** | ✅ Implemented |
+| **Secure DNA Mode** | ✅ Implemented |
+| **Safety Screener** | ✅ Implemented |
+| **REST API** | ✅ Working |
+| **Solana Programs** | ⏳ Planned (Phase 2) |
+| **Solana Integration** | ⏳ Planned (Phase 3) |
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- [Rust](https://rustup.rs/) (1.70+)
+- (Optional) [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools) for Phase 2+
+
+### Run the Backend
+
+```bash
+cd biocypher-rust-solana
+cargo run
 ```
 
----
+Server starts at **http://127.0.0.1:8080**
 
-## 📚 Documentation
+### API Examples
 
-### Getting Started
-
-| Document | Description | Who Should Read |
-|----------|-------------|-----------------|
-| **[SUMMARY.md](docs/SUMMARY.md)** | Executive summary, architecture, examples | Stakeholders, decision makers |
-| **[QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)** | Developer quick reference, commands, examples | Developers, engineers |
-| **[PROJECT_README.md](docs/PROJECT_README.md)** | Complete project context for AI agents | AI agents, onboarding developers |
-
-### Planning Documents
-
-| Document | Description | Length |
-|----------|-------------|--------|
-| **[tasks/DETAILED_IMPLEMENTATION_PLAN.md](tasks/DETAILED_IMPLEMENTATION_PLAN.md)** | Complete technical plan, phases, architecture | ~3,000 lines |
-| **[tasks/TODO_RUST_SOLANA.md](tasks/TODO_RUST_SOLANA.md)** | Implementation roadmap with code examples | ~1,200 lines |
-| **[tasks/todo.md](tasks/todo.md)** | 200+ detailed tasks with checkboxes | ~500 lines |
-
-### Activity & Reference
-
-| Document | Description |
-|----------|-------------|
-| **[docs/activity.md](docs/activity.md)** | Activity log with timestamps |
-| **[biocypher/PROTOCOL_SPECIFICATION.md](biocypher/PROTOCOL_SPECIFICATION.md)** | Original Python protocol spec |
-
----
-
-## 🚀 Key Features
-
-### DNA Encoding Modes (Ported from Python)
-
-| Mode | Description | Speed | Use Case |
-|------|-------------|-------|----------|
-| **Basic** | Simple binary→DNA mapping (00=A, 01=T, 10=C, 11=G) | ~10ms | Educational, simple encoding |
-| **Nanopore** | Triplet encoding, error correction, GC balancing | ~30ms | Nanopore sequencing optimization |
-| **Secure** | AES-256-CBC encryption + DNA encoding | ~20ms | Secure data storage |
-
-### Solana Smart Programs
-
-| Program | Instructions | Purpose |
-|---------|--------------|---------|
-| **Encoder** | encode_basic, encode_nanopore, encode_secure | On-chain encoding & storage |
-| **Decoder** | decode_basic, decode_nanopore, decode_secure | On-chain decoding & verification |
-| **Safety** | screen_sequence | On-chain safety screening |
-
-### Safety Screener
-
-- ✅ Pathogen detection (viral polymerase, toxins, antibiotic resistance)
-- ✅ Natural genome occurrence check (housekeeping genes, E. coli, human)
-- ✅ Sequence analysis (GC content, homopolymers, ORFs)
-- ✅ Risk assessment (Safe/Caution/Unsafe)
-- ✅ On-chain verification (immutable safety reports)
-
----
-
-## 💰 Cost Analysis
-
-| Operation | Off-Chain | On-Chain |
-|-----------|-----------|----------|
-| Encode | FREE | $0.00075 (0.000005 SOL) |
-| Decode | FREE | $0.00075 |
-| Safety Screen | FREE | $0.00090 |
-| Verify | FREE | FREE |
-
-**Recommended Pricing**:
-- Free Tier: 100 off-chain encodes/day
-- Basic Tier: 1,000 on-chain encodes/month = $5
-- Pro Tier: Unlimited encodes + priority = $20
-
----
-
-## 📊 Performance Targets
-
-| Metric | Target |
-|--------|--------|
-| API Response (off-chain) | < 50ms |
-| API Response (on-chain) | < 800ms |
-| Throughput | 1,000+ req/sec |
-| Uptime | 99.9% |
-| Concurrent Users | 1,000+ |
-
----
-
-## 🔧 Technology Stack
-
-### Rust Backend
-```toml
-actix-web = "4.4"              # High-performance web framework
-tokio = "1.35"                 # Async runtime
-aes-gcm = "0.10"               # AES-256 encryption
-pbkdf2 = "0.12"                # PBKDF2 key derivation
-solana-client = "1.17"         # Solana RPC client
+**Encode (Basic mode):**
+```bash
+curl -X POST http://127.0.0.1:8080/api/encode \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Hello World","mode":"basic"}'
 ```
 
-### Solana Programs
-```toml
-anchor-lang = "0.29"           # Solana framework
+**Encode (Nanopore mode):**
+```bash
+curl -X POST http://127.0.0.1:8080/api/encode \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Hello World","mode":"nanopore"}'
 ```
 
-### Frontend
+**Encode (Secure mode — requires password):**
+```bash
+curl -X POST http://127.0.0.1:8080/api/encode \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Secret","mode":"secure","password":"YourSecurePass123!"}'
+```
+
+**Decode:**
+```bash
+curl -X POST http://127.0.0.1:8080/api/decode \
+  -H "Content-Type: application/json" \
+  -d '{"sequence":"TACATCTTTCGATCGATCGG","mode":"basic"}'
+```
+
+**Safety Screen:**
+```bash
+curl -X POST http://127.0.0.1:8080/api/safety-screen \
+  -H "Content-Type: application/json" \
+  -d '{"dna_sequence":"ATCGATCGATCGATCG"}'
+```
+
+---
+
+## Project Structure
+
+```
+biocypher/
+├── biocypher-rust-solana/     # Rust backend (Actix-web)
+│   ├── backend/
+│   │   └── src/
+│   │       ├── api/           # HTTP endpoints (encode, decode, safety)
+│   │       ├── dna/           # Basic, Nanopore, Secure crypto
+│   │       ├── safety/        # Pathogen & sequence screening
+│   │       └── main.rs
+│   └── Cargo.toml
+├── biocypher/                 # Python reference implementation
+│   ├── dna_crypto.py
+│   ├── nanopore_dna_crypto.py
+│   ├── secure_nanopore_dna_crypto.py
+│   ├── safety_screener.py
+│   └── PROTOCOL_SPECIFICATION.md
+├── docs/                      # Documentation
+├── tasks/                     # Implementation plans
+├── BUILD_PLAN.md              # Phased build plan
+├── LICENSE                    # MIT License
+└── README.md
+```
+
+---
+
+## API Reference
+
+### Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | API info |
+| GET | `/health` | Health check |
+| POST | `/api/encode` | Encode message to DNA |
+| POST | `/api/decode` | Decode DNA to message |
+| POST | `/api/safety-screen` | Screen DNA sequence for safety |
+
+### Encode Request
+
 ```json
 {
-  "react": "^18.2",
-  "typescript": "^5.0",
-  "@solana/web3.js": "^1.87"
+  "message": "Hello",
+  "mode": "basic",
+  "password": null,
+  "store_on_chain": false
+}
+```
+
+- `mode`: `"basic"` | `"nanopore"` | `"secure"`
+- `password`: Required for `secure` mode
+- `store_on_chain`: Reserved for Phase 3 (Solana)
+
+### Encode Response
+
+```json
+{
+  "dna_sequence": "TACATCTTTCGATCGATCGG",
+  "transaction_signature": null,
+  "stats": {
+    "length": 20,
+    "bases": {"a": 4, "t": 7, "c": 5, "g": 4},
+    "gc_content": 45.0
+  }
 }
 ```
 
 ---
 
-## 📅 Implementation Timeline
+## Technology Stack
 
-### Phase 1: Rust Backend Foundation (Week 1-2)
-- Initialize Cargo workspace
-- Port DNA crypto to Rust (Basic, Nanopore, Secure)
-- Create Actix-web API server
-- Write 42 unit tests
+### Rust Backend (Implemented)
 
-### Phase 2: Solana Smart Programs (Week 2-3)
-- Create Encoder program (3 instructions)
-- Create Decoder program (3 instructions)
-- Create Safety program (1 instruction)
-- Deploy to devnet
+- **actix-web** 4.4 — Web framework
+- **tokio** 1.35 — Async runtime
+- **aes** + **cbc** — AES-256-CBC encryption (Secure mode)
+- **pbkdf2** — Key derivation (100,000 iterations)
+- **base64** — Crypto data serialization
+- **regex** — Pattern matching (safety screener)
 
-### Phase 3: Backend-Solana Integration (Week 3-4)
-- Implement Solana client wrapper
-- Integrate with API endpoints
-- Add Redis caching
-- Add transaction verification
+### Planned (Phase 2–3)
 
-### Phase 4: Frontend Updates (Week 4-5)
-- Update React components
-- Add blockchain features
-- Add transaction viewer
-- Add Solana explorer integration
-
-### Phase 5: Testing & Optimization (Week 5-6)
-- Integration testing
-- Performance testing
-- Security audit
-- Documentation
-
-### Phase 6: Deployment (Week 6-7)
-- Deploy to production
-- Set up monitoring
-- Launch
-
-**Total: 7 weeks**
+- **Solana** — Blockchain programs (Encoder, Decoder, Safety)
+- **Anchor** — Solana program framework
 
 ---
 
-## ✅ Why This Will Work
+## DNA Encoding Modes
 
-### Proven Technology
-- ✅ Rust: Memory-safe, high-performance, battle-tested
-- ✅ Actix-web: One of the fastest web frameworks
-- ✅ Solana: 65,000+ TPS, $0.00025 per transaction
-- ✅ Anchor: Mature framework for Solana programs
+### Basic Mode
 
-### Clear Architecture
-- ✅ Hybrid approach: Fast when needed, verifiable when wanted
-- ✅ Flexible: Choose on-chain or off-chain per operation
-- ✅ Cost-efficient: Only pay for blockchain when beneficial
-- ✅ Fallback: Can operate off-chain if Solana is congested
+- **Mapping**: 00→A, 01→T, 10→C, 11→G
+- **Format**: Raw DNA, no markers
+- **Speed**: ~10ms
 
-### Detailed Planning
-- ✅ 200+ detailed tasks with checkboxes
-- ✅ Complete code examples for all components
-- ✅ Risk assessment with mitigations
-- ✅ Success metrics defined
+### Nanopore Mode
 
-### Expert Support
-- ✅ Comprehensive documentation (3,800+ lines)
-- ✅ Protocol specification from Python implementation
-- ✅ 42 test cases to port from Python
-- ✅ Active communities for Rust, Solana, Anchor
+- **Encoding**: 9-bit parity + triple redundancy + triplet encoding
+- **Markers**: `ATCGATCG` (start) / `CGATATCG` (stop)
+- **Features**: Error correction, homopolymer avoidance, GC balancing
+- **Speed**: ~30ms
+
+### Secure Mode
+
+- **Encryption**: AES-256-CBC with PBKDF2 key derivation
+- **Format**: Base64(ciphertext) encoded as DNA + markers
+- **Markers**: Same as Nanopore
+- **Speed**: ~20ms
 
 ---
 
-## 🎯 Benefits Over Python/Flask
+## Safety Screener
 
-| Feature | Python/Flask | Rust + Solana |
-|---------|--------------|---------------|
-| **Performance** | 100-500ms | 10-50ms (off-chain) |
-| **Scalability** | Limited | Horizontal scaling |
-| **Memory Safety** | GIL issues | Guaranteed |
-| **Blockchain** | None | Optional Solana |
-| **Verification** | None | Immutable on-chain |
-| **Type Safety** | Runtime checks | Compile-time |
-| **Deployment** | Traditional | Container + blockchain |
+The safety module analyzes DNA sequences for:
+
+- **Pathogen signatures** — Viral polymerase, toxins, antibiotic resistance
+- **Natural occurrence** — Housekeeping genes, E. coli, human genome matches
+- **Sequence characteristics** — GC content, homopolymers, ORFs, repetitive elements
+- **Risk assessment** — Safe / Caution / Unsafe
 
 ---
 
-## 🚦 Getting Started
+## Testing
 
-### For Decision Makers
-1. Read **[docs/SUMMARY.md](docs/SUMMARY.md)** - Executive overview
-2. Review **Architecture Decision** section
-3. Approve **Phase 1: Rust Backend Foundation**
+```bash
+cd biocypher-rust-solana
+cargo test
+```
 
-### For Developers
-1. Read **[docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)** - Developer guide
-2. Set up development environment (see Quick Reference)
-3. Review **[tasks/todo.md](tasks/todo.md)** - Task list
-4. Begin Phase 1 tasks
-
-### For AI Agents
-1. Read **[docs/PROJECT_README.md](docs/PROJECT_README.md)** - Complete context
-2. Review **[tasks/DETAILED_IMPLEMENTATION_PLAN.md](tasks/DETAILED_IMPLEMENTATION_PLAN.md)** - Technical plan
-3. Follow **[tasks/todo.md](tasks/todo.md)** - Execute tasks sequentially
+50+ unit tests cover Basic, Nanopore, Secure modes and the safety screener.
 
 ---
 
-## 📊 Project Status
+## Roadmap
 
-| Phase | Status | Progress |
-|-------|--------|----------|
-| **Planning** | ✅ COMPLETE | 100% |
-| **Phase 1: Rust Backend** | 🟡 READY | 0% |
-| **Phase 2: Solana Programs** | ⏳ PENDING | 0% |
-| **Phase 3: Integration** | ⏳ PENDING | 0% |
-| **Phase 4: Frontend** | ⏳ PENDING | 0% |
-| **Phase 5: Testing** | ⏳ PENDING | 0% |
-| **Phase 6: Deployment** | ⏳ PENDING | 0% |
+| Phase | Focus | Status |
+|-------|-------|--------|
+| **1** | Rust backend (all 3 DNA modes) | ✅ Complete |
+| **2** | Solana smart programs | ⏳ Planned |
+| **3** | Backend–Solana integration | ⏳ Planned |
+| **4** | Frontend updates | ⏳ Planned |
+| **5** | Testing & hardening | ⏳ Planned |
+| **6** | Deployment | ⏳ Planned |
 
-**Overall Progress**: 10% (Planning Complete)
-
----
-
-## 🔗 Quick Links
-
-### Documentation
-- [Executive Summary](docs/SUMMARY.md)
-- [Quick Reference](docs/QUICK_REFERENCE.md)
-- [Project Context](docs/PROJECT_README.md)
-- [Implementation Plan](tasks/DETAILED_IMPLEMENTATION_PLAN.md)
-- [Task List](tasks/todo.md)
-- [Activity Log](docs/activity.md)
-
-### External Resources
-- [Rust Book](https://doc.rust-lang.org/book/)
-- [Actix-web](https://actix.rs/)
-- [Solana Docs](https://docs.solana.com/)
-- [Anchor Book](https://book.anchor-lang.com/)
-- [Solana Explorer](https://explorer.solana.com/)
+See [BUILD_PLAN.md](BUILD_PLAN.md) for details.
 
 ---
 
-## 🎉 Summary
+## Documentation
 
-**What We've Delivered:**
-- ✅ Comprehensive project review
-- ✅ Hybrid architecture design
-- ✅ Detailed implementation plan (7 phases, 7 weeks)
-- ✅ 200+ detailed tasks with checkboxes
-- ✅ Complete code examples (Rust, TypeScript, Anchor)
-- ✅ Cost analysis and pricing model
-- ✅ Risk assessment with mitigations
-- ✅ Success metrics
-- ✅ 3,800+ lines of documentation
-
-**The Answer:**
-**YES, we can absolutely build this!** The hybrid architecture is achievable, practical, and recommended.
-
-**Confidence Level:** HIGH
-**Timeline:** 7 weeks
-**Team Size:** 2-3 developers
-
-**Next Step:** Begin Phase 1: Rust Backend Foundation
+- [BUILD_PLAN.md](BUILD_PLAN.md) — Phased implementation plan
+- [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) — Developer quick reference
+- [docs/SUMMARY.md](docs/SUMMARY.md) — Executive summary
+- [biocypher/PROTOCOL_SPECIFICATION.md](biocypher/PROTOCOL_SPECIFICATION.md) — Protocol spec
 
 ---
 
-## 💬 Let's Discuss
+## License
 
-I'm ready to discuss:
-1. ✅ Architecture decisions and trade-offs
-2. ✅ Technical implementation details
-3. ✅ Cost analysis and pricing strategy
-4. ✅ Risk mitigation strategies
-5. ✅ Timeline and resource planning
-6. ✅ Any questions you have
+This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
 
-**Ready to begin when you are! 🚀**
+The Python reference implementation in `biocypher/` may have different licensing terms; see `biocypher/LICENSE`.
 
 ---
 
-**Project**: BioCypher Rust + Solana Migration
-**Status**: ✅ Planning Complete - Ready to Build
-**Last Updated**: 2025-01-20
-**Documentation**: 3,800+ lines across 7 documents
-**Confidence**: HIGH
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing`)
+5. Open a Pull Request
 
 ---
 
-*"Can we build this?"*
-
-**YES, and here's exactly how.** 🎯
+**BioCypher** — DNA cryptography for the modern stack.
