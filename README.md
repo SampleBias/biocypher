@@ -151,6 +151,24 @@ Then open http://127.0.0.1:8080/app/ and toggle **Arcium MPC** on. When connecte
 
 **Limits**: Arcium encode max 4 chars, decode exactly 16 bases.
 
+**Troubleshooting `arcium build` — edition2024 / Rust version:**
+
+If you see `feature 'edition2024' is required` or `Failed to build Anchor program`, Arcium’s dependencies need Rust 1.85+. Do both:
+
+1. **Upgrade Solana/Agave** to 3.1.x (platform-tools v1.52 with Rust 1.89):
+   ```bash
+   sh -c "$(curl -sSfL https://release.anza.xyz/v3.1.8/install)"
+   export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+   ```
+
+2. **Install Rust 1.89** for `cargo metadata` (host dependency resolution):
+   ```bash
+   rustup install 1.89.0
+   ```
+   The `biocypher-mxe/rust-toolchain.toml` file pins Rust 1.89 for this project.
+
+Then run `arcium build` from `biocypher-mxe/`.
+
 ### Run the Arcium MXE (MPC Encrypted Encoding)
 
 ```bash

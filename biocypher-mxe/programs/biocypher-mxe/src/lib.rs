@@ -214,6 +214,9 @@ pub struct InitEncodeBasicCompDef<'info> {
     pub payer: Signer<'info>,
     #[account(mut, address = derive_mxe_pda!())]
     pub mxe_account: Box<Account<'info, MXEAccount>>,
+    #[account(mut)]
+    /// CHECK: comp_def_account, checked by arcium program. Not initialized yet.
+    pub comp_def_account: UncheckedAccount<'info>,
     #[account(mut, address = derive_mxe_lut_pda!(mxe_account.lut_offset_slot))]
     /// CHECK: address_lookup_table, checked by arcium program
     pub address_lookup_table: UncheckedAccount<'info>,
@@ -302,6 +305,9 @@ pub struct InitDecodeBasicCompDef<'info> {
     pub payer: Signer<'info>,
     #[account(mut, address = derive_mxe_pda!())]
     pub mxe_account: Box<Account<'info, MXEAccount>>,
+    #[account(mut)]
+    /// CHECK: comp_def_account, checked by arcium program. Not initialized yet.
+    pub comp_def_account: UncheckedAccount<'info>,
     #[account(mut, address = derive_mxe_lut_pda!(mxe_account.lut_offset_slot))]
     /// CHECK: address_lookup_table
     pub address_lookup_table: UncheckedAccount<'info>,

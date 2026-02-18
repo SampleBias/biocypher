@@ -40,6 +40,7 @@ secrets/
 # Solana / Arcium
 test-ledger/
 .anchor/
+biocypher-mxe/artifacts/
 
 # IDE
 .idea/
