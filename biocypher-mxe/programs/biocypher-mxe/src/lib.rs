@@ -9,7 +9,7 @@ use arcium_anchor::prelude::*;
 const COMP_DEF_OFFSET_ENCODE_BASIC: u32 = comp_def_offset("encode_basic");
 const COMP_DEF_OFFSET_DECODE_BASIC: u32 = comp_def_offset("decode_basic");
 
-declare_id!("BioCyphMXE11111111111111111111111111111111");
+declare_id!("EneGTgWJJwnxLeBkD128NtpuGQVCmq14cUnPCNEVyueE");
 
 #[arcium_program]
 pub mod biocypher_mxe {

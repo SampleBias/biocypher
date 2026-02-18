@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-biocypher_mxe = "BioCyphMXE11111111111111111111111111111111"
+biocypher_mxe = "EneGTgWJJwnxLeBkD128NtpuGQVCmq14cUnPCNEVyueE"
 
 [registry]
 url = "https://api.apr.dev"

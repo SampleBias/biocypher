@@ -15,7 +15,7 @@ const PORT = parseInt(process.env.ARCIUM_SERVICE_PORT || "3001", 10);
 const RPC_URL = process.env.RPC_URL || "http://127.0.0.1:8899";
 const KEYPAIR_PATH = process.env.KEYPAIR_PATH || "~/.config/solana/id.json";
 const MXE_PATH = process.env.MXE_PATH || process.cwd();
-const PROGRAM_ID = process.env.MXE_PROGRAM_ID || "BioCyphMXE11111111111111111111111111111111";
+const PROGRAM_ID = process.env.MXE_PROGRAM_ID || "EneGTgWJJwnxLeBkD128NtpuGQVCmq14cUnPCNEVyueE";
 
 const client = new ArciumClient({
   rpcUrl: RPC_URL,
