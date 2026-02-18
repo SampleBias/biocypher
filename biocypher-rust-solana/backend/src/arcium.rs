@@ -1,6 +1,6 @@
 //! Arcium MXE Integration Module
 //!
-//! BioCypher uses Arcium for MPC-encrypted DNA encoding. Messages stay encrypted
+//! Bi0cyph3r uses Arcium for MPC-encrypted DNA encoding. Messages stay encrypted
 //! throughout computation—no server ever sees plaintext.
 //!
 //! ## Architecture

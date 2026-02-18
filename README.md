@@ -1,4 +1,4 @@
-# BioCypher
+# Bi0cyph3r
 
 ```
  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------. 
@@ -24,7 +24,7 @@
 
 ## Overview
 
-BioCypher is a DNA-based encoding system for storing and transmitting digital data. It supports three encoding modes and **Arcium-powered MPC** for privacy-preserving computation:
+Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital data. It supports three encoding modes and **Arcium-powered MPC** for privacy-preserving computation:
 
 | Mode | Description | Use Case |
 |------|-------------|----------|
@@ -203,7 +203,7 @@ biocypher/
 
 ```
   ┌──────────────────────────────────────────────────────────────┐
-  │  BIOCYPHER MXE — MPC EXECUTION ENVIRONMENT                   │
+  │  BI0CYPH3R MXE — MPC EXECUTION ENVIRONMENT                   │
   ├──────────────────────────────────────────────────────────────┤
   │                                                              │
   │  Confidential Instructions (Arcis):                           │
@@ -391,7 +391,7 @@ The Python reference implementation in `biocypher/` may have different licensing
 
 ```
   ╔═══════════════════════════════════════════════════════════════╗
-  ║  BioCypher — DNA cryptography for the modern stack             ║
+  ║  Bi0cyph3r — DNA cryptography for the modern stack             ║
   ║  Rust • Solana • Arcium MPC • Privacy by design                ║
   ╚═══════════════════════════════════════════════════════════════╝
 ```

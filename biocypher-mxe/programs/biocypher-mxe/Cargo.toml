@@ -1,7 +1,7 @@
 [package]
 name = "biocypher-mxe"
 version = "0.1.0"
-description = "BioCypher MXE - MPC-encrypted DNA encoding on Arcium"
+description = "Bi0cyph3r MXE - MPC-encrypted DNA encoding on Arcium"
 edition = "2021"
 
 [lib]

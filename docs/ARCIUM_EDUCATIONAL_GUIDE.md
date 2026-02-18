@@ -52,9 +52,9 @@ Arcium uses **Multi-Party Computation (MPC)** so that multiple independent nodes
 - **Secure AI**: Train or run inference on sensitive data without exposing it
 - **Compliance**: Process regulated data (health, finance) while preserving privacy
 
-### The BioCypher Angle
+### The Bi0cyph3r Angle
 
-For DNA cryptography systems like BioCypher, encrypted computation means:
+For DNA cryptography systems like Bi0cyph3r, encrypted computation means:
 
 - Messages can be encoded to DNA **without the server ever seeing the plaintext**
 - Safety screening can run on **encrypted sequences**
@@ -288,4 +288,4 @@ mod circuits {
 
 ---
 
-*This guide is intended for educational use with the BioCypher project. For the latest details, always refer to the official Arcium documentation.*
+*This guide is intended for educational use with the Bi0cyph3r project. For the latest details, always refer to the official Arcium documentation.*

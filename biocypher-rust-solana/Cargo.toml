@@ -10,7 +10,7 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-authors = ["BioCypher Team"]
+authors = ["Bi0cyph3r Team"]
 license = "MIT"
 
 [workspace.dependencies]

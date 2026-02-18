@@ -1,4 +1,4 @@
-//! BioCypher MXE - MPC-Encrypted DNA Encoding on Arcium
+//! Bi0cyph3r MXE - MPC-Encrypted DNA Encoding on Arcium
 //!
 //! Enables private DNA encoding/decoding: messages stay encrypted throughout
 //! computation. Uses Basic mode: 00→A, 01→T, 10→C, 11→G.

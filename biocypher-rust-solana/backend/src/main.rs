@@ -1,6 +1,6 @@
-//! BioCypher Rust Backend Server
+//! Bi0cyph3r Rust Backend Server
 //!
-//! Main entry point for the BioCypher DNA cryptography backend service
+//! Main entry point for the Bi0cyph3r DNA cryptography backend service
 
 use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpServer, HttpResponse, Responder};
@@ -26,7 +26,7 @@ async fn health_check() -> impl Responder {
 /// Root endpoint
 async fn root() -> impl Responder {
     HttpResponse::Ok().json(serde_json::json!({
-        "name": "BioCypher Backend API",
+        "name": "Bi0cyph3r Backend API",
         "version": env!("CARGO_PKG_VERSION"),
         "endpoints": {
             "health": "/health",
@@ -46,7 +46,7 @@ async fn main() -> std::io::Result<()> {
         .with_target(false)
         .init();
 
-    info!("🧬 Starting BioCypher Backend Server v{}", env!("CARGO_PKG_VERSION"));
+    info!("🧬 Starting Bi0cyph3r Backend Server v{}", env!("CARGO_PKG_VERSION"));
 
     // Bind to address from env or default
     let bind_address = std::env::var("BIND_ADDRESS")

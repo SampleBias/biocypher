@@ -1,5 +1,5 @@
 /**
- * BioCypher MXE - Arcium MPC Encrypted DNA Encoding Tests
+ * Bi0cyph3r MXE - Arcium MPC Encrypted DNA Encoding Tests
  *
  * Tests encode_basic and decode_basic confidential instructions.
  * Message stays encrypted throughout; client decrypts result.
@@ -40,7 +40,7 @@ function dnaToString(dnaBytes: number[]): string {
   return dnaBytes.map((b) => DNA_BASES[b & 3]).join("");
 }
 
-describe("BioCypher MXE", () => {
+describe("Bi0cyph3r MXE", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
   const program = anchor.workspace.BiocypherMxe as Program<BiocypherMxe>;
   const provider = anchor.getProvider();

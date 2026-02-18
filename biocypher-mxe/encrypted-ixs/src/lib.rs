@@ -1,4 +1,4 @@
-//! BioCypher MXE - Encrypted DNA Encoding Circuits
+//! Bi0cyph3r MXE - Encrypted DNA Encoding Circuits
 //!
 //! Basic DNA encoding: 00→A(0), 01→T(1), 10→C(2), 11→G(3)
 //! Each byte produces 4 DNA bases (2 bits per base).
