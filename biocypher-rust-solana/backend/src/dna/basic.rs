@@ -24,7 +24,7 @@ impl DNACoder for DNACrypto {
     /// use biocypher_backend::dna::traits::DNACoder;
     ///
     /// let dna = DNACrypto::encode_message("Hi").unwrap();
-    /// assert_eq!(dna, "TAAATATA");
+    /// assert_eq!(dna, "TACATCCT");
     /// ```
     fn encode_message(message: &str) -> Result<String> {
         if message.is_empty() {
@@ -50,7 +50,7 @@ impl DNACoder for DNACrypto {
     /// use biocypher_backend::dna::basic::DNACrypto;
     /// use biocypher_backend::dna::traits::DNACoder;
     ///
-    /// let message = DNACrypto::decode_sequence("TAAATATA").unwrap();
+    /// let message = DNACrypto::decode_sequence("TACATCCT").unwrap();
     /// assert_eq!(message, "Hi");
     /// ```
     fn decode_sequence(sequence: &str) -> Result<String> {

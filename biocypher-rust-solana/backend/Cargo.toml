@@ -5,6 +5,9 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+# Default binary for `cargo run` (server)
+default-run = "biocypher-backend"
+
 [[bin]]
 name = "bi0cyph3r"
 path = "src/bin/bi0cyph3r.rs"
@@ -14,6 +17,7 @@ path = "src/bin/bi0cyph3r.rs"
 tokio = { workspace = true }
 actix-web = { workspace = true }
 actix-cors = { workspace = true }
+actix-files = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

@@ -75,6 +75,10 @@ async fn main() -> std::io::Result<()> {
             .route("/api/decode", web::post().to(api::decode::decode_message))
             .route("/api/safety-screen", web::post().to(api::safety::safety_screen))
             .route("/api/arcium-info", web::get().to(arcium::arcium_info))
+            .service(
+                actix_files::Files::new("/app", concat!(env!("CARGO_MANIFEST_DIR"), "/../static"))
+                    .index_file("index.html"),
+            )
     })
     .bind(&bind_address)?
     .run()

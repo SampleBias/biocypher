@@ -23,11 +23,11 @@ type Aes256CbcDec = Decryptor<Aes256>;
 pub struct SecureDNACrypto;
 
 impl DNACoder for SecureDNACrypto {
-    fn encode_message(message: &str) -> Result<String> {
+    fn encode_message(_message: &str) -> Result<String> {
         Err(DNACryptoError::PasswordRequired.into())
     }
 
-    fn decode_sequence(sequence: &str) -> Result<String> {
+    fn decode_sequence(_sequence: &str) -> Result<String> {
         Err(DNACryptoError::PasswordRequired.into())
     }
 }

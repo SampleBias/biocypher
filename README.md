@@ -76,6 +76,8 @@ Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital da
 | **REST API** | ✅ Working |
 | **Arcium MXE** | ✅ Implemented (encode_basic, decode_basic) |
 | **Arcium Integration** | ✅ Backend `/api/arcium-info` |
+| **CLI** | ✅ `bi0cyph3r` encode/decode/safety |
+| **Web UI** | ✅ Browser-based at `/app/` |
 | **Solana Programs** | ⏳ Planned (Phase 2) |
 | **Solana Integration** | ⏳ Planned (Phase 3) |
 
@@ -89,14 +91,41 @@ Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital da
 - (Optional) [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools)
 - (Optional) [Arcium CLI](https://docs.arcium.com/developers/installation) for MXE
 
-### Run the Backend
+### Option 1: Install script (recommended)
+
+```bash
+./install.sh          # Build CLI
+./install.sh -i       # Build + install to ~/.local/bin
+
+# CLI usage
+bi0cyph3r encode "Hello World"
+bi0cyph3r decode "TACATCTTTCGATCGATCGG"
+bi0cyph3r safety "ATCGATCGATCG"
+
+# Start server + Web UI
+./run-server.sh
+```
+
+### Option 2: CLI only (no server)
 
 ```bash
 cd biocypher-rust-solana
-cargo run
+cargo build --release --bin bi0cyph3r
+
+./target/release/bi0cyph3r encode "Hello World"
+./target/release/bi0cyph3r decode "TACATCTTTCGATCGATCGG"
+./target/release/bi0cyph3r safety "ATCGATCGATCG"
 ```
 
-Server starts at **http://127.0.0.1:8080**
+### Option 3: Web UI + API Server
+
+```bash
+./run-server.sh
+# or: cd biocypher-rust-solana && cargo run
+```
+
+- **API**: http://127.0.0.1:8080
+- **Web UI**: http://127.0.0.1:8080/app/
 
 ### Run the Arcium MXE (MPC Encrypted Encoding)
 
@@ -328,6 +357,15 @@ The safety module analyzes DNA sequences for:
 - **Risk assessment** — Safe / Caution / Unsafe
 
 ---
+
+## Install (Release Binary)
+
+```bash
+./install.sh
+# Or manually:
+cd biocypher-rust-solana && cargo build --release --bin bi0cyph3r
+cp target/release/bi0cyph3r ~/.local/bin/
+```
 
 ## Testing
 

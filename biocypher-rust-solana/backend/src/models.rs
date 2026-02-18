@@ -31,6 +31,7 @@ fn default_encoding_mode() -> EncodingMode {
 }
 
 /// Check if value is false (for serde skip_serializing_if)
+#[allow(dead_code)]
 fn is_false(value: &bool) -> bool {
     !value
 }

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bi0cyph3r — DNA Cryptography</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --warning: #d29922;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    .container { max-width: 640px; margin: 0 auto; }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--accent);
+    }
+    .subtitle { opacity: 0.7; font-size: 0.9rem; margin-bottom: 2rem; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; }
+    input, textarea, select {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+    textarea { min-height: 100px; resize: vertical; }
+    button {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .output {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--bg);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+    .error { color: #f85149; }
+    .success { color: var(--success); }
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .tab {
+      padding: 0.5rem 1rem;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .password-row { margin-top: 1rem; }
+    .stats { font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Bi0cyph3r</h1>
+    <p class="subtitle">DNA cryptography — encode and decode messages as DNA sequences</p>
+
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" data-tab="encode">Encode</button>
+        <button class="tab" data-tab="decode">Decode</button>
+        <button class="tab" data-tab="safety">Safety Screen</button>
+      </div>
+
+      <div id="encode" class="tab-content active">
+        <label>Message</label>
+        <textarea id="encodeInput" placeholder="Enter message to encode..."></textarea>
+        <label>Mode</label>
+        <select id="encodeMode">
+          <option value="basic">Basic</option>
+          <option value="nanopore">Nanopore</option>
+          <option value="secure">Secure (password)</option>
+        </select>
+        <div id="encodePassword" class="password-row" style="display:none">
+          <label>Password</label>
+          <input type="password" id="encodePass" placeholder="Required for secure mode">
+        </div>
+        <button id="encodeBtn" style="margin-top:1rem">Encode</button>
+        <div id="encodeOutput" class="output" style="display:none"></div>
+      </div>
+
+      <div id="decode" class="tab-content">
+        <label>DNA Sequence</label>
+        <textarea id="decodeInput" placeholder="ATCGATCG..."></textarea>
+        <label>Mode</label>
+        <select id="decodeMode">
+          <option value="basic">Basic</option>
+          <option value="nanopore">Nanopore</option>
+          <option value="secure">Secure (password)</option>
+        </select>
+        <div id="decodePassword" class="password-row" style="display:none">
+          <label>Password</label>
+          <input type="password" id="decodePass" placeholder="Required for secure mode">
+        </div>
+        <button id="decodeBtn" style="margin-top:1rem">Decode</button>
+        <div id="decodeOutput" class="output" style="display:none"></div>
+      </div>
+
+      <div id="safety" class="tab-content">
+        <label>DNA Sequence</label>
+        <textarea id="safetyInput" placeholder="ATCGATCG..."></textarea>
+        <button id="safetyBtn" style="margin-top:1rem">Screen</button>
+        <div id="safetyOutput" class="output" style="display:none"></div>
+      </div>
+    </div>
+
+    <p class="subtitle">API: <code id="apiUrl">http://127.0.0.1:8080</code></p>
+  </div>
+
+  <script>
+    const API = 'http://127.0.0.1:8080';
+
+    document.querySelectorAll('.tab').forEach(t => {
+      t.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        document.getElementById(t.dataset.tab).classList.add('active');
+      });
+    });
+
+    ['encode', 'decode'].forEach(m => {
+      document.getElementById(m + 'Mode').addEventListener('change', e => {
+        document.getElementById(m + 'Password').style.display =
+          e.target.value === 'secure' ? 'block' : 'none';
+      });
+    });
+
+    document.getElementById('encodeBtn').addEventListener('click', async () => {
+      const msg = document.getElementById('encodeInput').value.trim();
+      const mode = document.getElementById('encodeMode').value;
+      const password = document.getElementById('encodePass').value;
+      const out = document.getElementById('encodeOutput');
+
+      if (!msg) { out.textContent = 'Enter a message'; out.classList.add('error'); out.style.display = 'block'; return; }
+      if (mode === 'secure' && !password) { out.textContent = 'Password required for secure mode'; out.classList.add('error'); out.style.display = 'block'; return; }
+
+      out.classList.remove('error', 'success');
+      try {
+        const body = { message: msg, mode };
+        if (mode === 'secure') body.password = password;
+        const r = await fetch(API + '/api/encode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const j = await r.json();
+        if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
+        else {
+          out.textContent = j.dna_sequence + (j.stats ? '\n\n' + j.stats.length + ' bases, GC: ' + j.stats.gc_content + '%' : '');
+          out.classList.add('success');
+        }
+      } catch (e) {
+        out.textContent = 'Error: ' + e.message + '\n\nIs the server running? (cargo run)';
+        out.classList.add('error');
+      }
+      out.style.display = 'block';
+    });
+
+    document.getElementById('decodeBtn').addEventListener('click', async () => {
+      const seq = document.getElementById('decodeInput').value.trim().replace(/\s/g, '');
+      const mode = document.getElementById('decodeMode').value;
+      const password = document.getElementById('decodePass').value;
+      const out = document.getElementById('decodeOutput');
+
+      if (!seq) { out.textContent = 'Enter a DNA sequence'; out.classList.add('error'); out.style.display = 'block'; return; }
+      if (mode === 'secure' && !password) { out.textContent = 'Password required for secure mode'; out.classList.add('error'); out.style.display = 'block'; return; }
+
+      out.classList.remove('error', 'success');
+      try {
+        const body = { sequence: seq, mode };
+        if (mode === 'secure') body.password = password;
+        const r = await fetch(API + '/api/decode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const j = await r.json();
+        if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
+        else {
+          out.textContent = j.decoded_message;
+          out.classList.add('success');
+        }
+      } catch (e) {
+        out.textContent = 'Error: ' + e.message + '\n\nIs the server running? (cargo run)';
+        out.classList.add('error');
+      }
+      out.style.display = 'block';
+    });
+
+    document.getElementById('safetyBtn').addEventListener('click', async () => {
+      const seq = document.getElementById('safetyInput').value.trim().replace(/\s/g, '');
+      const out = document.getElementById('safetyOutput');
+
+      if (!seq) { out.textContent = 'Enter a DNA sequence'; out.classList.add('error'); out.style.display = 'block'; return; }
+
+      out.classList.remove('error', 'success');
+      try {
+        const r = await fetch(API + '/api/safety-screen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dna_sequence: seq })
+        });
+        const j = await r.json();
+        if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
+        else {
+          let s = 'Status: ' + j.safety_status + ' ' + (j.safety_icon || '') + '\n';
+          s += 'GC content: ' + (j.sequence_characteristics?.gc_content || 'N/A') + '%\n';
+          if (j.recommendations?.length) s += '\nRecommendations: ' + j.recommendations.join('\n');
+          out.textContent = s;
+          out.classList.add('success');
+        }
+      } catch (e) {
+        out.textContent = 'Error: ' + e.message + '\n\nIs the server running? (cargo run)';
+        out.classList.add('error');
+      }
+      out.style.display = 'block';
+    });
+  </script>
+</body>
+</html>

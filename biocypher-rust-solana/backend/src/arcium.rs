@@ -42,7 +42,7 @@
 //!
 //! See [docs/ARCIUM_EDUCATIONAL_GUIDE.md](../../../docs/ARCIUM_EDUCATIONAL_GUIDE.md) for details.
 
-use actix_web::{web, HttpResponse};
+use actix_web::HttpResponse;
 use serde::Serialize;
 
 #[derive(Serialize)]
