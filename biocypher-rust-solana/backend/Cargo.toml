@@ -5,6 +5,10 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "bi0cyph3r"
+path = "src/bin/bi0cyph3r.rs"
+
 [dependencies]
 # Workspace dependencies
 tokio = { workspace = true }

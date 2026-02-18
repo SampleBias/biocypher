@@ -7,12 +7,7 @@ use actix_web::{middleware, web, App, HttpServer, HttpResponse, Responder};
 use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber;
 
-mod api;
-mod arcium;
-mod dna;
-mod error;
-mod models;
-mod safety;
+use biocypher_backend::{api, arcium};
 
 /// Health check endpoint
 async fn health_check() -> impl Responder {
