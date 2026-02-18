@@ -1,7 +1,6 @@
 # Rust
 target/
 **/*.rs.bk
-Cargo.lock
 
 # Python
 __pycache__/
@@ -11,17 +10,43 @@ __pycache__/
 .Python
 venv/
 env/
-.env
 *.egg-info/
 .eggs/
 dist/
 build/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.pnp.*
+
+# Sensitive / secrets
+.env
+.env.*
+*.pem
+*.key
+id.json
+*-keypair.json
+keypair.json
+*.secret
+secrets/
+
+# Solana / Arcium
+test-ledger/
+.anchor/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
