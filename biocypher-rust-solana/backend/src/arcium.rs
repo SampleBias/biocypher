@@ -52,15 +52,20 @@ pub struct ArciumInfo {
     pub message_limit_bytes: u32,
     pub dna_output_bases: u32,
     pub docs_url: &'static str,
+    /// Arcium service URL for MPC encode/decode (Node.js sidecar)
+    pub service_url: String,
 }
 
 /// Returns Arcium MXE integration info for clients.
 pub async fn arcium_info() -> HttpResponse {
+    let service_url = std::env::var("ARCIUM_SERVICE_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:3001".to_string());
     HttpResponse::Ok().json(ArciumInfo {
         mxe_project: "biocypher-mxe",
         instructions: vec!["encode_basic", "decode_basic"],
         message_limit_bytes: 4,
         dna_output_bases: 16,
         docs_url: "/docs/ARCIUM_EDUCATIONAL_GUIDE.md",
+        service_url,
     })
 }

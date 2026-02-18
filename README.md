@@ -127,6 +127,30 @@ cargo build --release --bin bi0cyph3r
 - **API**: http://127.0.0.1:8080
 - **Web UI**: http://127.0.0.1:8080/app/
 
+### Option 4: Arcium MPC (Secure Encryption)
+
+Uses Solana CLI keypair — no Phantom wallet needed.
+
+```bash
+# 1. Build MXE (one-time)
+cd biocypher-mxe
+yarn install
+arcium build
+
+# 2. Start Arcium localnet (in one terminal)
+arcium test   # or: arcium localnet
+
+# 3. Start Arcium service (in another terminal)
+./run-arcium-service.sh
+
+# 4. Start backend + Web UI
+./run-server.sh
+```
+
+Then open http://127.0.0.1:8080/app/ and toggle **Arcium MPC** on. When connected, encode/decode use MPC — message stays encrypted end-to-end.
+
+**Limits**: Arcium encode max 4 chars, decode exactly 16 bases.
+
 ### Run the Arcium MXE (MPC Encrypted Encoding)
 
 ```bash
@@ -207,6 +231,12 @@ biocypher/
 │   ├── tests/                   # TypeScript tests
 │   ├── Arcium.toml
 │   └── Anchor.toml
+│
+├── biocypher-arcium-service/    # Node.js Arcium proxy (Solana CLI keypair)
+│   ├── src/
+│   │   ├── index.ts             # Express server
+│   │   └── arcium-client.ts     # Arcium encode/decode
+│   └── package.json
 │
 ├── biocypher/                   # Python reference implementation
 │   ├── dna_crypto.py

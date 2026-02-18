@@ -88,12 +88,74 @@
     .tab-content.active { display: block; }
     .password-row { margin-top: 1rem; }
     .stats { font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem; }
+    .arcium-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .toggle {
+      width: 44px;
+      height: 24px;
+      background: var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s;
+    }
+    .toggle.on { background: var(--success); }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: var(--text);
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: left 0.2s;
+    }
+    .toggle.on::after { left: 22px; }
+    .toggle-label { font-size: 0.85rem; }
+    .arcium-status {
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+    .arcium-status.ready { color: var(--success); }
+    .arcium-status.loading { color: var(--warning); }
+    .arcium-status.error { color: #f85149; }
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Bi0cyph3r</h1>
     <p class="subtitle">DNA cryptography — encode and decode messages as DNA sequences</p>
+
+    <div class="card">
+      <div class="arcium-row">
+        <div class="toggle-wrap">
+          <div id="arciumToggle" class="toggle" title="Use Arcium MPC for secure encryption"></div>
+          <span class="toggle-label">Arcium MPC</span>
+        </div>
+        <span id="arciumStatus" class="arcium-status">Off — local encoding</span>
+      </div>
+    </div>
 
     <div class="card">
       <div class="tabs">
@@ -149,6 +211,56 @@
 
   <script>
     const API = 'http://127.0.0.1:8080';
+    let ARCIUM_URL = 'http://127.0.0.1:3001';
+    let arciumOn = false;
+    let arciumReady = false;
+
+    async function fetchArciumInfo() {
+      try {
+        const r = await fetch(API + '/api/arcium-info');
+        const j = await r.json();
+        if (j.service_url) ARCIUM_URL = j.service_url.replace(/\/$/, '');
+      } catch (_) {}
+    }
+
+    async function checkArciumStatus() {
+      const statusEl = document.getElementById('arciumStatus');
+      statusEl.className = 'arcium-status loading';
+      statusEl.innerHTML = '<span class="spinner"></span> Connecting…';
+      try {
+        const r = await fetch(ARCIUM_URL + '/status');
+        const j = await r.json();
+        if (r.ok && j.arcium === 'ready') {
+          arciumReady = true;
+          statusEl.className = 'arcium-status ready';
+          statusEl.textContent = 'Connected — secure encryption';
+        } else {
+          arciumReady = false;
+          statusEl.className = 'arcium-status error';
+          statusEl.textContent = j.error || 'Not ready';
+        }
+      } catch (e) {
+        arciumReady = false;
+        statusEl.className = 'arcium-status error';
+        statusEl.textContent = 'Arcium service not running';
+      }
+    }
+
+    document.getElementById('arciumToggle').addEventListener('click', async () => {
+      arciumOn = !arciumOn;
+      const toggle = document.getElementById('arciumToggle');
+      toggle.classList.toggle('on', arciumOn);
+      const statusEl = document.getElementById('arciumStatus');
+      if (arciumOn) {
+        await checkArciumStatus();
+      } else {
+        arciumReady = false;
+        statusEl.className = 'arcium-status';
+        statusEl.textContent = 'Off — local encoding';
+      }
+    });
+
+    fetchArciumInfo();
 
     document.querySelectorAll('.tab').forEach(t => {
       t.addEventListener('click', () => {
@@ -174,24 +286,40 @@
 
       if (!msg) { out.textContent = 'Enter a message'; out.classList.add('error'); out.style.display = 'block'; return; }
       if (mode === 'secure' && !password) { out.textContent = 'Password required for secure mode'; out.classList.add('error'); out.style.display = 'block'; return; }
+      if (arciumOn && !arciumReady) { out.textContent = 'Connect to Arcium first (toggle on and wait for connection)'; out.classList.add('error'); out.style.display = 'block'; return; }
+      if (arciumOn && msg.length > 4) { out.textContent = 'Arcium MPC supports max 4 characters. Use local encode for longer messages.'; out.classList.add('error'); out.style.display = 'block'; return; }
 
       out.classList.remove('error', 'success');
       try {
-        const body = { message: msg, mode };
-        if (mode === 'secure') body.password = password;
-        const r = await fetch(API + '/api/encode', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        const j = await r.json();
-        if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
-        else {
-          out.textContent = j.dna_sequence + (j.stats ? '\n\n' + j.stats.length + ' bases, GC: ' + j.stats.gc_content + '%' : '');
-          out.classList.add('success');
+        if (arciumOn) {
+          const r = await fetch(ARCIUM_URL + '/encode-mpc', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg })
+          });
+          const j = await r.json();
+          if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
+          else {
+            out.textContent = j.dna_sequence + (j.stats ? '\n\n' + j.stats.length + ' bases, GC: ' + j.stats.gc_content + '%\n\n(Arcium MPC)' : '');
+            out.classList.add('success');
+          }
+        } else {
+          const body = { message: msg, mode };
+          if (mode === 'secure') body.password = password;
+          const r = await fetch(API + '/api/encode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const j = await r.json();
+          if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
+          else {
+            out.textContent = j.dna_sequence + (j.stats ? '\n\n' + j.stats.length + ' bases, GC: ' + j.stats.gc_content + '%' : '');
+            out.classList.add('success');
+          }
         }
       } catch (e) {
-        out.textContent = 'Error: ' + e.message + '\n\nIs the server running? (cargo run)';
+        out.textContent = 'Error: ' + e.message + '\n\n' + (arciumOn ? 'Is the Arcium service running?' : 'Is the server running? (cargo run)');
         out.classList.add('error');
       }
       out.style.display = 'block';
@@ -205,24 +333,40 @@
 
       if (!seq) { out.textContent = 'Enter a DNA sequence'; out.classList.add('error'); out.style.display = 'block'; return; }
       if (mode === 'secure' && !password) { out.textContent = 'Password required for secure mode'; out.classList.add('error'); out.style.display = 'block'; return; }
+      if (arciumOn && !arciumReady) { out.textContent = 'Connect to Arcium first (toggle on and wait for connection)'; out.classList.add('error'); out.style.display = 'block'; return; }
+      if (arciumOn && seq.length !== 16) { out.textContent = 'Arcium MPC requires exactly 16 DNA bases.'; out.classList.add('error'); out.style.display = 'block'; return; }
 
       out.classList.remove('error', 'success');
       try {
-        const body = { sequence: seq, mode };
-        if (mode === 'secure') body.password = password;
-        const r = await fetch(API + '/api/decode', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        const j = await r.json();
-        if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
-        else {
-          out.textContent = j.decoded_message;
-          out.classList.add('success');
+        if (arciumOn) {
+          const r = await fetch(ARCIUM_URL + '/decode-mpc', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sequence: seq })
+          });
+          const j = await r.json();
+          if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
+          else {
+            out.textContent = j.decoded_message + '\n\n(Arcium MPC)';
+            out.classList.add('success');
+          }
+        } else {
+          const body = { sequence: seq, mode };
+          if (mode === 'secure') body.password = password;
+          const r = await fetch(API + '/api/decode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const j = await r.json();
+          if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
+          else {
+            out.textContent = j.decoded_message;
+            out.classList.add('success');
+          }
         }
       } catch (e) {
-        out.textContent = 'Error: ' + e.message + '\n\nIs the server running? (cargo run)';
+        out.textContent = 'Error: ' + e.message + '\n\n' + (arciumOn ? 'Is the Arcium service running?' : 'Is the server running? (cargo run)');
         out.classList.add('error');
       }
       out.style.display = 'block';
