@@ -8,6 +8,7 @@ use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber;
 
 mod api;
+mod arcium;
 mod dna;
 mod error;
 mod models;
@@ -31,7 +32,8 @@ async fn root() -> impl Responder {
             "health": "/health",
             "encode": "/api/encode",
             "decode": "/api/decode",
-            "safety_screen": "/api/safety-screen"
+            "safety_screen": "/api/safety-screen",
+            "arcium_info": "/api/arcium-info"
         }
     }))
 }
@@ -77,6 +79,7 @@ async fn main() -> std::io::Result<()> {
             .route("/api/encode", web::post().to(api::encode::encode_message))
             .route("/api/decode", web::post().to(api::decode::decode_message))
             .route("/api/safety-screen", web::post().to(api::safety::safety_screen))
+            .route("/api/arcium-info", web::get().to(arcium::arcium_info))
     })
     .bind(&bind_address)?
     .run()

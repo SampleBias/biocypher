@@ -1,6 +1,22 @@
 # BioCypher
 
-**DNA Cryptography System** — Encode and decode messages as DNA sequences with optional blockchain verification.
+```
+ .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------. 
+| .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. |
+| |   ______     | || |     _____    | || |     ____     | || |     ______   | || |  ____  ____  | || |   ______     | || |  ____  ____  | || |    ______    | || |  _______     | |
+| |  |_   _ \    | || |    |_   _|   | || |   .'    '.   | || |   .' ___  |  | || | |_  _||_  _| | || |  |_   __ \   | || | |_   ||   _| | || |   / ____ `.  | || | |_   __ \    | |
+| |    | |_) |   | || |      | |     | || |  |  .--.  |  | || |  / .'   \_|  | || |   \ \  / /   | || |    | |__) |  | || |   | |__| |   | || |   `'  __) |  | || |   | |__) |   | |
+| |    |  __'.   | || |      | |     | || |  | |    | |  | || |  | |         | || |    \ \/ /    | || |    |  ___/   | || |   |  __  |   | || |   _  |__ '.  | || |   |  __ /    | |
+| |   _| |__) |  | || |     _| |_    | || |  |  `--'  |  | || |  \ `.___.'\  | || |    _|  |_    | || |   _| |_      | || |  _| |  | |_  | || |  | \____) |  | || |  _| |  \ \_  | |
+| |  |_______/   | || |    |_____|   | || |   '.____.'   | || |   `._____.'  | || |   |______|   | || |  |_____|     | || | |____||____| | || |   \______.'  | || | |____| |___| | |
+| |              | || |              | || |              | || |              | || |              | || |              | || |              | || |              | || |              | |
+| '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' |
+ '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------' 
+                                                          
+    DNA Cryptography + MPC Privacy on Solana
+```
+
+**DNA Cryptography System** — Encode and decode messages as DNA sequences with optional blockchain verification and **Arcium MPC** for confidential computation.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -8,13 +24,43 @@
 
 ## Overview
 
-BioCypher is a DNA-based encoding system for storing and transmitting digital data. It supports three encoding modes optimized for different use cases:
+BioCypher is a DNA-based encoding system for storing and transmitting digital data. It supports three encoding modes and **Arcium-powered MPC** for privacy-preserving computation:
 
 | Mode | Description | Use Case |
 |------|-------------|----------|
 | **Basic** | Simple binary→DNA mapping (00=A, 01=T, 10=C, 11=G) | Educational, simple encoding |
 | **Nanopore** | Triplet encoding, error correction, GC balancing, homopolymer avoidance | Nanopore sequencing optimization |
 | **Secure** | AES-256-CBC encryption + DNA encoding | Secure data storage |
+| **Arcium MPC** | Encrypted computation—message never decrypted on server | Confidential DNA encoding on Solana |
+
+---
+
+## Arcium: Super Encrypted Computing
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ARCIUM MPC ENCRYPTED DNA ENCODING                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   Client                Solana / Arcium              MPC Cluster            │
+│     │                          │                            │               │
+│     │  1. Encrypt message      │                            │               │
+│     │  2. Submit to MXE        │                            │               │
+│     │ ────────────────────────>│  3. Queue computation      │               │
+│     │                          │ ──────────────────────────>│               │
+│     │                          │                            │ 4. Compute   │
+│     │                          │                            │    in MPC     │
+│     │                          │  5. Callback (encrypted)   │               │
+│     │                          │<───────────────────────────│               │
+│     │  6. Decrypt DNA result   │                            │               │
+│     │<────────────────────────│                            │               │
+│     │                          │                            │               │
+│     └── Message & result stay encrypted end-to-end ────────────────────────┘
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Why Arcium?** Your message is encrypted before it leaves your device. The MPC cluster computes on secret-shared data—no single node ever sees plaintext. Only you can decrypt the DNA result.
 
 ---
 
@@ -28,6 +74,8 @@ BioCypher is a DNA-based encoding system for storing and transmitting digital da
 | **Secure DNA Mode** | ✅ Implemented |
 | **Safety Screener** | ✅ Implemented |
 | **REST API** | ✅ Working |
+| **Arcium MXE** | ✅ Implemented (encode_basic, decode_basic) |
+| **Arcium Integration** | ✅ Backend `/api/arcium-info` |
 | **Solana Programs** | ⏳ Planned (Phase 2) |
 | **Solana Integration** | ⏳ Planned (Phase 3) |
 
@@ -38,7 +86,8 @@ BioCypher is a DNA-based encoding system for storing and transmitting digital da
 ### Prerequisites
 
 - [Rust](https://rustup.rs/) (1.70+)
-- (Optional) [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools) for Phase 2+
+- (Optional) [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools)
+- (Optional) [Arcium CLI](https://docs.arcium.com/developers/installation) for MXE
 
 ### Run the Backend
 
@@ -49,7 +98,22 @@ cargo run
 
 Server starts at **http://127.0.0.1:8080**
 
-### API Examples
+### Run the Arcium MXE (MPC Encrypted Encoding)
+
+```bash
+# Install Arcium (one-time)
+curl --proto '=https' --tlsv1.2 -sSfL https://install.arcium.com/ | bash
+
+# Build and test the MXE
+cd biocypher-mxe
+yarn install
+arcium build
+arcium test
+```
+
+---
+
+## API Examples
 
 **Encode (Basic mode):**
 ```bash
@@ -86,32 +150,78 @@ curl -X POST http://127.0.0.1:8080/api/safety-screen \
   -d '{"dna_sequence":"ATCGATCGATCGATCG"}'
 ```
 
+**Arcium MXE Info:**
+```bash
+curl http://127.0.0.1:8080/api/arcium-info
+```
+
 ---
 
 ## Project Structure
 
 ```
 biocypher/
-├── biocypher-rust-solana/     # Rust backend (Actix-web)
+├── biocypher-rust-solana/       # Rust backend (Actix-web)
 │   ├── backend/
 │   │   └── src/
-│   │       ├── api/           # HTTP endpoints (encode, decode, safety)
-│   │       ├── dna/           # Basic, Nanopore, Secure crypto
-│   │       ├── safety/        # Pathogen & sequence screening
+│   │       ├── api/             # HTTP endpoints
+│   │       ├── arcium/          # Arcium integration info
+│   │       ├── dna/             # Basic, Nanopore, Secure crypto
+│   │       ├── safety/          # Pathogen & sequence screening
 │   │       └── main.rs
 │   └── Cargo.toml
-├── biocypher/                 # Python reference implementation
+│
+├── biocypher-mxe/               # Arcium MXE (MPC encrypted DNA)
+│   ├── programs/
+│   │   └── biocypher-mxe/       # Solana program + Arcium instructions
+│   ├── encrypted-ixs/           # Arcis circuits (encode_basic, decode_basic)
+│   ├── tests/                   # TypeScript tests
+│   ├── Arcium.toml
+│   └── Anchor.toml
+│
+├── biocypher/                   # Python reference implementation
 │   ├── dna_crypto.py
 │   ├── nanopore_dna_crypto.py
 │   ├── secure_nanopore_dna_crypto.py
 │   ├── safety_screener.py
 │   └── PROTOCOL_SPECIFICATION.md
-├── docs/                      # Documentation
-├── tasks/                     # Implementation plans
-├── BUILD_PLAN.md              # Phased build plan
-├── LICENSE                    # MIT License
+│
+├── docs/
+│   ├── ARCIUM_EDUCATIONAL_GUIDE.md   # Arcium concepts & workflow
+│   ├── QUICK_REFERENCE.md
+│   └── SUMMARY.md
+│
+├── tasks/
+├── BUILD_PLAN.md
+├── LICENSE
 └── README.md
 ```
+
+---
+
+## Arcium MXE Details
+
+```
+  ┌──────────────────────────────────────────────────────────────┐
+  │  BIOCYPHER MXE — MPC EXECUTION ENVIRONMENT                   │
+  ├──────────────────────────────────────────────────────────────┤
+  │                                                              │
+  │  Confidential Instructions (Arcis):                           │
+  │  • encode_basic  — 4 bytes → 16 DNA bases (0=A, 1=T, 2=C, 3=G)│
+  │  • decode_basic — 16 DNA bases → 4 bytes                      │
+  │                                                              │
+  │  Crypto: Rescue cipher + x25519 ECDH                          │
+  │  Trust:  Cerberus (dishonest majority)                        │
+  │                                                              │
+  └──────────────────────────────────────────────────────────────┘
+```
+
+| Instruction | Input | Output |
+|-------------|-------|--------|
+| `encode_basic` | 4 encrypted bytes | 16 encrypted DNA bases |
+| `decode_basic` | 16 encrypted DNA bases | 4 encrypted bytes |
+
+See [docs/ARCIUM_EDUCATIONAL_GUIDE.md](docs/ARCIUM_EDUCATIONAL_GUIDE.md) for full documentation.
 
 ---
 
@@ -126,6 +236,7 @@ biocypher/
 | POST | `/api/encode` | Encode message to DNA |
 | POST | `/api/decode` | Decode DNA to message |
 | POST | `/api/safety-screen` | Screen DNA sequence for safety |
+| GET | `/api/arcium-info` | Arcium MXE integration info |
 
 ### Encode Request
 
@@ -160,7 +271,7 @@ biocypher/
 
 ## Technology Stack
 
-### Rust Backend (Implemented)
+### Rust Backend
 
 - **actix-web** 4.4 — Web framework
 - **tokio** 1.35 — Async runtime
@@ -169,10 +280,17 @@ biocypher/
 - **base64** — Crypto data serialization
 - **regex** — Pattern matching (safety screener)
 
+### Arcium MXE
+
+- **Arcium** 0.8 — MPC encrypted computation
+- **Arcis** — Rust DSL for confidential instructions
+- **Anchor** 0.32 — Solana program framework
+- **Solana** — Orchestration & verification
+
 ### Planned (Phase 2–3)
 
-- **Solana** — Blockchain programs (Encoder, Decoder, Safety)
-- **Anchor** — Solana program framework
+- **Solana** — On-chain Encoder, Decoder, Safety programs
+- **Backend–Solana** — `store_on_chain`, `decode_on_chain`
 
 ---
 
@@ -213,12 +331,17 @@ The safety module analyzes DNA sequences for:
 
 ## Testing
 
+**Backend:**
 ```bash
 cd biocypher-rust-solana
 cargo test
 ```
 
-50+ unit tests cover Basic, Nanopore, Secure modes and the safety screener.
+**Arcium MXE:**
+```bash
+cd biocypher-mxe
+arcium test
+```
 
 ---
 
@@ -227,6 +350,7 @@ cargo test
 | Phase | Focus | Status |
 |-------|-------|--------|
 | **1** | Rust backend (all 3 DNA modes) | ✅ Complete |
+| **1.5** | Arcium MXE (MPC encode/decode) | ✅ Complete |
 | **2** | Solana smart programs | ⏳ Planned |
 | **3** | Backend–Solana integration | ⏳ Planned |
 | **4** | Frontend updates | ⏳ Planned |
@@ -240,6 +364,7 @@ See [BUILD_PLAN.md](BUILD_PLAN.md) for details.
 ## Documentation
 
 - [BUILD_PLAN.md](BUILD_PLAN.md) — Phased implementation plan
+- [docs/ARCIUM_EDUCATIONAL_GUIDE.md](docs/ARCIUM_EDUCATIONAL_GUIDE.md) — Arcium concepts, MPC lifecycle, Arcis
 - [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) — Developer quick reference
 - [docs/SUMMARY.md](docs/SUMMARY.md) — Executive summary
 - [biocypher/PROTOCOL_SPECIFICATION.md](biocypher/PROTOCOL_SPECIFICATION.md) — Protocol spec
@@ -264,4 +389,9 @@ The Python reference implementation in `biocypher/` may have different licensing
 
 ---
 
-**BioCypher** — DNA cryptography for the modern stack.
+```
+  ╔═══════════════════════════════════════════════════════════════╗
+  ║  BioCypher — DNA cryptography for the modern stack             ║
+  ║  Rust • Solana • Arcium MPC • Privacy by design                ║
+  ╚═══════════════════════════════════════════════════════════════╝
+```
