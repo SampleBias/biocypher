@@ -24,7 +24,7 @@
 
 ## Overview
 
-Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital data. It supports three encoding modes and **Arcium-powered MPC** for privacy-preserving computation:
+Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital data. It supports three encoding modes, **Arcium-powered MPC** for privacy-preserving computation, a **Plasmid Designer** for creating expression-ready plasmids, and **secure transmission** to DNA manufacturers (Twist, IDT, VectorBuilder).
 
 | Mode | Description | Use Case |
 |------|-------------|----------|
@@ -64,6 +64,14 @@ Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital da
 
 ---
 
+## Plasmid Designer & Secure Transmission
+
+- **Plasmid Designer** — Convert messages to DNA, view in linear and circular format (SeqViz), export FASTA/TXT/Instructions
+- **Expression mode** — Optional eGFP fluorescence cassette and decoding markers for payload extraction
+- **Secure transmission** — Encrypt plasmid designs (AES-256-GCM) and transmit to DNA manufacturer APIs via Arcium service
+
+---
+
 ## Project Status
 
 | Component | Status |
@@ -74,10 +82,13 @@ Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital da
 | **Secure DNA Mode** | ✅ Implemented |
 | **Safety Screener** | ✅ Implemented |
 | **REST API** | ✅ Working |
+| **Plasmid Designer** | ✅ Implemented (SeqViz, FASTA/TXT/Instructions export) |
+| **Expression Mode** | ✅ eGFP cassette, decoding markers, annotations |
+| **Secure Transmission** | ✅ Encrypted transmit to manufacturer via Arcium |
 | **Arcium MXE** | ✅ Implemented (encode_basic, decode_basic) |
-| **Arcium Integration** | ✅ Backend `/api/arcium-info` |
+| **Arcium Integration** | ✅ Backend `/api/arcium-info`, `/transmit-secure` |
 | **CLI** | ✅ `bi0cyph3r` encode/decode/safety |
-| **Web UI** | ✅ Browser-based at `/app/` |
+| **Web UI** | ✅ Browser-based at `/app/` (Encode, Decode, Safety, Plasmid tabs) |
 | **Solana Programs** | ⏳ Planned (Phase 2) |
 | **Solana Integration** | ⏳ Planned (Phase 3) |
 
@@ -137,6 +148,8 @@ cargo build --release --bin bi0cyph3r
 - **API**: http://127.0.0.1:8080
 - **Web UI**: http://127.0.0.1:8080/app/
 
+**Web UI tabs**: Encode, Decode, Safety Screen, Plasmid (designer with linear/circular view, export, secure transmission)
+
 ### Option 4: Arcium MPC (Secure Encryption)
 
 Uses Solana CLI keypair — no Phantom wallet needed.
@@ -160,6 +173,8 @@ arcium test   # or: arcium localnet
 Then open http://127.0.0.1:8080/app/ and toggle **Arcium MPC** on. When connected, encode/decode use MPC — message stays encrypted end-to-end.
 
 **Limits**: Arcium encode max 4 chars, decode exactly 16 bases.
+
+**Secure transmission**: With Arcium connected, design a plasmid in the Plasmid tab, then click **Transmit to Manufacturer**. Enter a transmission password (share with the manufacturer for decryption) and optionally the manufacturer API URL. The FASTA + instructions are encrypted (AES-256-GCM) and forwarded via the Arcium service. Set `MANUFACTURER_API_URL` in the Arcium service for production.
 
 **Troubleshooting `arcium build` — edition2024 / Rust version:**
 
@@ -236,6 +251,8 @@ curl -X POST http://127.0.0.1:8080/api/safety-screen \
 curl http://127.0.0.1:8080/api/arcium-info
 ```
 
+**Arcium service** (when running): encode-mpc, decode-mpc, transmit-secure — see [biocypher-arcium-service/README.md](biocypher-arcium-service/README.md).
+
 ---
 
 ## Project Structure
@@ -250,6 +267,7 @@ biocypher/
 │   │       ├── dna/             # Basic, Nanopore, Secure crypto
 │   │       ├── safety/          # Pathogen & sequence screening
 │   │       └── main.rs
+│   ├── static/                 # Web UI (index.html, offline.html)
 │   └── Cargo.toml
 │
 ├── biocypher-mxe/               # Arcium MXE (MPC encrypted DNA)
@@ -262,7 +280,7 @@ biocypher/
 │
 ├── biocypher-arcium-service/    # Node.js Arcium proxy (Solana CLI keypair)
 │   ├── src/
-│   │   ├── index.ts             # Express server
+│   │   ├── index.ts             # Express server (encode, decode, transmit-secure)
 │   │   └── arcium-client.ts     # Arcium encode/decode
 │   └── package.json
 │
@@ -416,6 +434,31 @@ The safety module analyzes DNA sequences for:
 
 ---
 
+## Plasmid Designer
+
+Design plasmids from messages and export for DNA synthesis:
+
+- **Simple mode** — Payload only (encoded message as DNA)
+- **Expression mode** — Optional eGFP fluorescence cassette, decoding markers (flanking sequences for payload extraction)
+- **Visualization** — SeqViz circular + linear view with annotations
+- **Export** — FASTA, plain TXT, Instructions JSON
+- **Decode** — "Extract payload from plasmid" option to decode full expression plasmids
+
+---
+
+## Secure Transmission to DNA Manufacturers
+
+Transmit plasmid designs to Twist, IDT, VectorBuilder, or custom APIs with end-to-end encryption:
+
+- **Encryption** — AES-256-GCM, PBKDF2-SHA256 (100k iterations)
+- **Flow** — Design plasmid → Transmit (Arcium connected) → Enter password → Encrypted payload forwarded to manufacturer API
+- **Manufacturer** — Receives encrypted blob; decrypts with shared password
+- **Config** — `MANUFACTURER_API_URL` env var or per-request `manufacturer_url`
+
+See [biocypher-arcium-service/README.md](biocypher-arcium-service/README.md) for the `/transmit-secure` endpoint details.
+
+---
+
 ## Install (Release Binary)
 
 ```bash
@@ -447,6 +490,7 @@ arcium test
 |-------|-------|--------|
 | **1** | Rust backend (all 3 DNA modes) | ✅ Complete |
 | **1.5** | Arcium MXE (MPC encode/decode) | ✅ Complete |
+| **1.6** | Plasmid Designer, Expression mode, Secure transmission | ✅ Complete |
 | **2** | Solana smart programs | ⏳ Planned |
 | **3** | Backend–Solana integration | ⏳ Planned |
 | **4** | Frontend updates | ⏳ Planned |
@@ -461,6 +505,7 @@ See [BUILD_PLAN.md](BUILD_PLAN.md) for details.
 
 - [BUILD_PLAN.md](BUILD_PLAN.md) — Phased implementation plan
 - [docs/ARCIUM_EDUCATIONAL_GUIDE.md](docs/ARCIUM_EDUCATIONAL_GUIDE.md) — Arcium concepts, MPC lifecycle, Arcis
+- [biocypher-arcium-service/README.md](biocypher-arcium-service/README.md) — Arcium service, transmit-secure endpoint
 - [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) — Developer quick reference
 - [docs/SUMMARY.md](docs/SUMMARY.md) — Executive summary
 - [biocypher/PROTOCOL_SPECIFICATION.md](biocypher/PROTOCOL_SPECIFICATION.md) — Protocol spec
@@ -488,6 +533,6 @@ The Python reference implementation in `biocypher/` may have different licensing
 ```
   ╔═══════════════════════════════════════════════════════════════╗
   ║  Bi0cyph3r — DNA cryptography for the modern stack             ║
-  ║  Rust • Solana • Arcium MPC • Privacy by design                ║
+  ║  Rust • Solana • Arcium MPC • Plasmid Designer • Secure Tx      ║
   ╚═══════════════════════════════════════════════════════════════╝
 ```
