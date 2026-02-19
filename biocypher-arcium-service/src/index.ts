@@ -2,6 +2,7 @@
  * Bi0cyph3r Arcium MPC Service
  *
  * HTTP API for Arcium encode_basic / decode_basic.
+ * Secure transmission of plasmid designs to DNA manufacturers (Twist, IDT, etc.).
  * Uses Solana CLI keypair (~/.config/solana/id.json).
  * Run from repo root; service must find biocypher-mxe for Arcium config.
  */
@@ -9,6 +10,7 @@
 import express from "express";
 import cors from "cors";
 import * as path from "path";
+import { randomUUID } from "crypto";
 import { ArciumClient } from "./arcium-client.js";
 
 const PORT = parseInt(process.env.ARCIUM_SERVICE_PORT || "3001", 10);
@@ -16,6 +18,8 @@ const RPC_URL = process.env.RPC_URL || "http://127.0.0.1:8899";
 const KEYPAIR_PATH = process.env.KEYPAIR_PATH || "~/.config/solana/id.json";
 const MXE_PATH = process.env.MXE_PATH || process.cwd();
 const PROGRAM_ID = process.env.MXE_PROGRAM_ID || "EneGTgWJJwnxLeBkD128NtpuGQVCmq14cUnPCNEVyueE";
+const MANUFACTURER_API_URL = process.env.MANUFACTURER_API_URL || "";
+const TRANSMIT_MOCK = process.env.TRANSMIT_MOCK === "true";
 
 const client = new ArciumClient({
   rpcUrl: RPC_URL,
@@ -105,6 +109,71 @@ app.post("/decode-mpc", async (req, res) => {
     });
   } catch (e) {
     console.error("decode-mpc error:", e);
+    res.status(500).json({
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+});
+
+/**
+ * Secure transmission endpoint.
+ * Forwards encrypted plasmid FASTA + instructions to DNA manufacturer API.
+ * Payload stays encrypted end-to-end; manufacturer decrypts with shared password.
+ *
+ * Encryption format (AES-256-GCM, PBKDF2-SHA256 100k iterations):
+ *   encrypted = base64(salt(16) || iv(12) || ciphertext+tag)
+ *   Key derived from password + salt.
+ */
+app.post("/transmit-secure", async (req, res) => {
+  try {
+    const { encrypted, manufacturer_url } = req.body;
+    if (typeof encrypted !== "string") {
+      res.status(400).json({ error: "encrypted (string) required" });
+      return;
+    }
+    const targetUrl = (manufacturer_url || MANUFACTURER_API_URL).trim();
+    const transmissionId = randomUUID();
+    const payload = {
+      transmission_id: transmissionId,
+      encrypted,
+      source: "biocypher-arcium",
+      timestamp: new Date().toISOString(),
+    };
+
+    if (!targetUrl || TRANSMIT_MOCK) {
+      if (TRANSMIT_MOCK || !targetUrl) {
+        console.log("[transmit-secure] Transmission received (mock/staging)", transmissionId);
+      }
+      res.json({
+        message: TRANSMIT_MOCK
+          ? "Encrypted transmission accepted (mock mode)"
+          : "Encrypted transmission accepted. Set MANUFACTURER_API_URL or provide manufacturer_url for production.",
+        transmission_id: transmissionId,
+      });
+      return;
+    }
+
+    const fwd = await fetch(targetUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!fwd.ok) {
+      const errText = await fwd.text();
+      res.status(502).json({
+        error: `Manufacturer API error (${fwd.status}): ${errText}`,
+        transmission_id: transmissionId,
+      });
+      return;
+    }
+    const fwdJson = await fwd.json().catch(() => ({}));
+    res.json({
+      message: "Encrypted transmission sent to manufacturer",
+      transmission_id: transmissionId,
+      manufacturer_response: fwdJson,
+    });
+  } catch (e) {
+    console.error("transmit-secure error:", e);
     res.status(500).json({
       error: e instanceof Error ? e.message : String(e),
     });

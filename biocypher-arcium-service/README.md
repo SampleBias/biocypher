@@ -32,6 +32,8 @@ MXE_PATH=. node ../biocypher-arcium-service/dist/index.js
 | KEYPAIR_PATH | ~/.config/solana/id.json | Solana keypair |
 | MXE_PATH | process.cwd() | Path to biocypher-mxe |
 | MXE_PROGRAM_ID | BioCyphMXE11111111111111111111111111111111 | Program ID |
+| MANUFACTURER_API_URL | (empty) | DNA manufacturer API endpoint (Twist, IDT, etc.) |
+| TRANSMIT_MOCK | false | If true, accept transmissions without forwarding |
 
 ## Endpoints
 
@@ -41,6 +43,7 @@ MXE_PATH=. node ../biocypher-arcium-service/dist/index.js
 | GET | /status | Arcium readiness (connects to MXE) |
 | POST | /encode-mpc | Encode 4 bytes → 16 DNA bases |
 | POST | /decode-mpc | Decode 16 DNA bases → 4 bytes |
+| POST | /transmit-secure | Forward encrypted plasmid to manufacturer API |
 
 ## Limits
 
