@@ -38,6 +38,7 @@ fn encoding_mode_to_u8(mode: EncodingMode) -> u8 {
         EncodingMode::Basic => 0,
         EncodingMode::Nanopore => 1,
         EncodingMode::Secure => 2,
+        EncodingMode::SplitKey => 3,
     }
 }
 

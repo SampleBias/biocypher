@@ -8,6 +8,7 @@ use crate::dna::{
     basic::DNACrypto,
     nanopore::NanoporeDNACrypto,
     secure::SecureDNACrypto,
+    split_key::SplitKeyDNACrypto,
     traits::{DNACoder, SequenceStats as TraitsSequenceStats},
 };
 use crate::error::Result;
@@ -32,6 +33,8 @@ pub async fn decode_message(
         sequence,
         mode,
         password,
+        k1_base64,
+        k2_base64,
         decode_on_chain,
     } = req.into_inner();
 
@@ -45,6 +48,16 @@ pub async fn decode_message(
         })));
     }
 
+    // Check K1/K2 for split-key mode
+    if matches!(mode, crate::dna::EncodingMode::SplitKey) {
+        if k1_base64.is_none() || k2_base64.is_none() {
+            error!("K1 and K2 required for split-key mode");
+            return Ok(HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "K1 and K2 are required for split-key mode"
+            })));
+        }
+    }
+
     // Decode based on mode
     let decoded_message = match mode {
         crate::dna::EncodingMode::Basic => DNACrypto::decode_sequence(&sequence)?,
@@ -53,6 +66,11 @@ pub async fn decode_message(
             let pwd = password.as_ref().expect("password validated above");
             SecureDNACrypto::decode_with_password(&sequence, pwd)?
         }
+        crate::dna::EncodingMode::SplitKey => {
+            let k1 = k1_base64.as_ref().expect("k1 validated above");
+            let k2 = k2_base64.as_ref().expect("k2 validated above");
+            SplitKeyDNACrypto::decode_with_split_keys(&sequence, k1, k2)?
+        }
     };
 
     // Get statistics
@@ -60,6 +78,7 @@ pub async fn decode_message(
         crate::dna::EncodingMode::Basic => DNACrypto::get_sequence_stats(&sequence),
         crate::dna::EncodingMode::Nanopore => NanoporeDNACrypto::get_sequence_stats(&sequence),
         crate::dna::EncodingMode::Secure => SecureDNACrypto::get_sequence_stats(&sequence),
+        crate::dna::EncodingMode::SplitKey => SplitKeyDNACrypto::get_sequence_stats(&sequence),
     };
 
     let transaction_signature = if decode_on_chain {

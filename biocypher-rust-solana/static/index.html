@@ -210,10 +210,14 @@
           <option value="basic">Basic</option>
           <option value="nanopore">Nanopore</option>
           <option value="secure">Secure (password)</option>
+          <option value="splitkey">Split Key</option>
         </select>
         <div id="encodePassword" class="password-row" style="display:none">
           <label>Password</label>
           <input type="password" id="encodePass" placeholder="Required for secure mode">
+        </div>
+        <div id="encodeSplitKeyInfo" class="password-row" style="display:none">
+          <p style="font-size:0.85rem;opacity:0.9">Split Key: K1 (you keep) + K2 (escrow). Manufacturer gets ciphertext-as-DNA only.</p>
         </div>
         <div class="checkbox-row">
           <input type="checkbox" id="encodeStoreOnChain">
@@ -235,10 +239,28 @@
           <option value="basic">Basic</option>
           <option value="nanopore">Nanopore</option>
           <option value="secure">Secure (password)</option>
+          <option value="splitkey">Split Key</option>
         </select>
         <div id="decodePassword" class="password-row" style="display:none">
           <label>Password</label>
           <input type="password" id="decodePass" placeholder="Required for secure mode">
+        </div>
+        <div id="decodeSplitKeyWrap" class="password-row" style="display:none">
+          <label>K1 (base64)</label>
+          <textarea id="decodeK1" placeholder="Paste K1 or load from file" rows="2"></textarea>
+          <label style="margin-top:0.5rem">K2 source</label>
+          <select id="decodeK2Source">
+            <option value="paste">Paste K2</option>
+            <option value="escrow">Fetch from escrow</option>
+          </select>
+          <div id="decodeK2Paste" style="margin-top:0.5rem">
+            <label>K2 (base64)</label>
+            <textarea id="decodeK2" placeholder="Paste K2" rows="2"></textarea>
+          </div>
+          <div id="decodeK2Escrow" style="margin-top:0.5rem;display:none">
+            <label>Transmission ID</label>
+            <input type="text" id="decodeTransmissionId" placeholder="Transmission ID from encode">
+          </div>
         </div>
         <div class="checkbox-row">
           <input type="checkbox" id="decodeOnChain">
@@ -267,10 +289,14 @@
           <option value="basic">Basic</option>
           <option value="nanopore">Nanopore</option>
           <option value="secure">Secure (password)</option>
+          <option value="splitkey">Split Key</option>
         </select>
         <div id="plasmidPassword" class="password-row" style="display:none">
           <label>Password</label>
           <input type="password" id="plasmidPass" placeholder="Required for secure mode">
+        </div>
+        <div id="plasmidSplitKeyInfo" class="password-row" style="display:none">
+          <p style="font-size:0.85rem;opacity:0.9">Split Key: Save K1, escrow K2. Transmit sends sequence directly (manufacturer has no key).</p>
         </div>
         <label>Plasmid name</label>
         <input type="text" id="plasmidName" placeholder="biocypher_plasmid" value="biocypher_plasmid">
@@ -301,12 +327,21 @@
           <button id="transmitBtn" title="Requires Arcium MPC">Transmit to Manufacturer</button>
         </div>
         <div id="plasmidTransmitWrap" class="plasmid-transmit-wrap hidden">
-          <label>Transmission password</label>
-          <input type="password" id="transmitPassword" placeholder="Share with manufacturer for decryption">
+          <div id="transmitSecureWrap">
+            <label>Transmission password</label>
+            <input type="password" id="transmitPassword" placeholder="Share with manufacturer for decryption">
+          </div>
+          <div id="transmitSplitKeyNote" style="display:none">
+            <p style="font-size:0.85rem;opacity:0.9">Sequence sent directly. Manufacturer synthesizes DNA (ciphertext); they have no key.</p>
+          </div>
           <label>Manufacturer API URL</label>
           <input type="text" id="transmitManufacturerUrl" placeholder="https://api.example.com/orders (optional)">
-          <button id="transmitConfirmBtn">Send encrypted transmission</button>
+          <button id="transmitConfirmBtn">Send transmission</button>
           <div id="transmitOutput" class="output" style="display:none"></div>
+        </div>
+        <div id="plasmidSplitKeyActions" class="export-row hidden" style="margin-top:0.5rem">
+          <button id="saveK1Btn">Save K1</button>
+          <button id="escrowK2Btn">Escrow K2</button>
         </div>
       </div>
     </div>
@@ -386,16 +421,34 @@
       });
     });
 
-    ['encode', 'decode'].forEach(m => {
-      document.getElementById(m + 'Mode').addEventListener('change', e => {
-        document.getElementById(m + 'Password').style.display =
-          e.target.value === 'secure' ? 'block' : 'none';
-      });
+    document.getElementById('encodeMode').addEventListener('change', e => {
+      const v = e.target.value;
+      document.getElementById('encodePassword').style.display = v === 'secure' ? 'block' : 'none';
+      document.getElementById('encodeSplitKeyInfo').style.display = v === 'splitkey' ? 'block' : 'none';
+    });
+
+    document.getElementById('decodeMode').addEventListener('change', e => {
+      const v = e.target.value;
+      document.getElementById('decodePassword').style.display = v === 'secure' ? 'block' : 'none';
+      document.getElementById('decodeSplitKeyWrap').style.display = v === 'splitkey' ? 'block' : 'none';
+    });
+
+    document.getElementById('decodeK2Source').addEventListener('change', e => {
+      const paste = document.getElementById('decodeK2Paste');
+      const escrow = document.getElementById('decodeK2Escrow');
+      if (e.target.value === 'paste') {
+        paste.style.display = 'block';
+        escrow.style.display = 'none';
+      } else {
+        paste.style.display = 'none';
+        escrow.style.display = 'block';
+      }
     });
 
     document.getElementById('plasmidMode').addEventListener('change', e => {
-      document.getElementById('plasmidPassword').style.display =
-        e.target.value === 'secure' ? 'block' : 'none';
+      const v = e.target.value;
+      document.getElementById('plasmidPassword').style.display = v === 'secure' ? 'block' : 'none';
+      document.getElementById('plasmidSplitKeyInfo').style.display = v === 'splitkey' ? 'block' : 'none';
     });
 
     document.getElementById('plasmidExpressionMode').addEventListener('change', e => {
@@ -507,7 +560,10 @@
           hasFluorescence: !!hasFluorescence,
           hasMarkers: !!expressionMode,
           payloadStart,
-          payloadEnd
+          payloadEnd,
+          k1_base64: j.k1_base64 || null,
+          k2_base64: j.k2_base64 || null,
+          transmission_id: j.transmission_id || null
         };
 
         const seqInfo = fullSequence.length + ' bases' + (expressionMode ? ' (payload: ' + payload.length + ')' : '') + ', GC: ' + (j.stats?.gc_content ?? 0) + '%';
@@ -516,6 +572,13 @@
 
         viewerWrap.classList.remove('hidden');
         exportRow.classList.remove('hidden');
+
+        const splitKeyActions = document.getElementById('plasmidSplitKeyActions');
+        if (mode === 'splitkey' && j.k1_base64) {
+          splitKeyActions.classList.remove('hidden');
+        } else {
+          splitKeyActions.classList.add('hidden');
+        }
 
         const viewerEl = document.getElementById('plasmidViewer');
         const annotations = buildPlasmidAnnotations(payload, expressionMode, hasFluorescence);
@@ -613,39 +676,24 @@
       return { encrypted: btoa(String.fromCharCode(...blob)) };
     }
 
-    document.getElementById('transmitBtn').addEventListener('click', () => {
-      if (!plasmidDesign) return;
-      if (!arciumOn || !arciumReady) {
-        alert('Connect Arcium MPC first (toggle on and wait for connection) to use secure transmission.');
-        return;
-      }
-      document.getElementById('plasmidTransmitWrap').classList.toggle('hidden');
+    document.getElementById('saveK1Btn').addEventListener('click', () => {
+      if (!plasmidDesign || !plasmidDesign.k1_base64) return;
+      downloadFile(plasmidDesign.k1_base64, 'k1_' + (plasmidDesign.transmission_id || 'key') + '.txt', 'text/plain');
     });
 
-    document.getElementById('transmitConfirmBtn').addEventListener('click', async () => {
-      const password = document.getElementById('transmitPassword').value;
-      const manufacturerUrl = document.getElementById('transmitManufacturerUrl').value.trim();
+    document.getElementById('escrowK2Btn').addEventListener('click', async () => {
+      if (!plasmidDesign || !plasmidDesign.k2_base64 || !plasmidDesign.transmission_id) return;
       const out = document.getElementById('transmitOutput');
-      if (!plasmidDesign) return;
-      if (!password) {
-        out.textContent = 'Enter a transmission password (share with manufacturer for decryption).';
-        out.classList.add('error');
-        out.style.display = 'block';
-        return;
-      }
-      out.classList.remove('error', 'success');
       out.style.display = 'block';
-      out.textContent = 'Encrypting and transmitting...';
+      out.textContent = 'Storing K2 in escrow...';
       try {
-        const fasta = '>' + plasmidDesign.name + '\n' + wrapSequence(plasmidDesign.sequence);
-        const payload = JSON.stringify({ fasta, instructions: plasmidDesign });
-        const { encrypted } = await encryptPayload(payload, password);
-        const body = { encrypted };
-        if (manufacturerUrl) body.manufacturer_url = manufacturerUrl;
-        const r = await fetch(ARCIUM_URL + '/transmit-secure', {
+        const r = await fetch(ARCIUM_URL + '/escrow-store', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
+          body: JSON.stringify({
+            transmission_id: plasmidDesign.transmission_id,
+            k2: plasmidDesign.k2_base64
+          })
         });
         const j = await r.json();
         if (!r.ok) {
@@ -653,8 +701,82 @@
           out.classList.add('error');
           return;
         }
-        out.textContent = (j.message || 'Transmission sent.') + (j.transmission_id ? '\n\nID: ' + j.transmission_id : '');
+        out.textContent = 'K2 stored in escrow. Transmission ID: ' + plasmidDesign.transmission_id;
+        out.classList.remove('error');
         out.classList.add('success');
+      } catch (e) {
+        out.textContent = 'Error: ' + e.message + '\n\nIs the Arcium service running?';
+        out.classList.add('error');
+      }
+    });
+
+    document.getElementById('transmitBtn').addEventListener('click', () => {
+      if (!plasmidDesign) return;
+      const isSplitKey = plasmidDesign.mode === 'splitkey';
+      if (!isSplitKey && (!arciumOn || !arciumReady)) {
+        alert('Connect Arcium MPC first (toggle on and wait for connection) to use secure transmission.');
+        return;
+      }
+      document.getElementById('transmitSecureWrap').style.display = isSplitKey ? 'none' : 'block';
+      document.getElementById('transmitSplitKeyNote').style.display = isSplitKey ? 'block' : 'none';
+      document.getElementById('transmitConfirmBtn').textContent = isSplitKey ? 'Send to manufacturer' : 'Send encrypted transmission';
+      document.getElementById('plasmidTransmitWrap').classList.toggle('hidden');
+    });
+
+    document.getElementById('transmitConfirmBtn').addEventListener('click', async () => {
+      const manufacturerUrl = document.getElementById('transmitManufacturerUrl').value.trim();
+      const out = document.getElementById('transmitOutput');
+      if (!plasmidDesign) return;
+      const isSplitKey = plasmidDesign.mode === 'splitkey';
+      if (!isSplitKey) {
+        const password = document.getElementById('transmitPassword').value;
+        if (!password) {
+          out.textContent = 'Enter a transmission password (share with manufacturer for decryption).';
+          out.classList.add('error');
+          out.style.display = 'block';
+          return;
+        }
+      }
+      out.classList.remove('error', 'success');
+      out.style.display = 'block';
+      out.textContent = isSplitKey ? 'Transmitting...' : 'Encrypting and transmitting...';
+      try {
+        const fasta = '>' + plasmidDesign.name + '\n' + wrapSequence(plasmidDesign.sequence);
+        if (isSplitKey) {
+          const body = { fasta, instructions: plasmidDesign };
+          if (manufacturerUrl) body.manufacturer_url = manufacturerUrl;
+          const r = await fetch(ARCIUM_URL + '/transmit-split-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const j = await r.json();
+          if (!r.ok) {
+            out.textContent = j.error || JSON.stringify(j);
+            out.classList.add('error');
+            return;
+          }
+          out.textContent = (j.message || 'Transmission sent.') + (j.transmission_id ? '\n\nID: ' + j.transmission_id : '');
+          out.classList.add('success');
+        } else {
+          const payload = JSON.stringify({ fasta, instructions: plasmidDesign });
+          const { encrypted } = await encryptPayload(payload, document.getElementById('transmitPassword').value);
+          const body = { encrypted };
+          if (manufacturerUrl) body.manufacturer_url = manufacturerUrl;
+          const r = await fetch(ARCIUM_URL + '/transmit-secure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const j = await r.json();
+          if (!r.ok) {
+            out.textContent = j.error || JSON.stringify(j);
+            out.classList.add('error');
+            return;
+          }
+          out.textContent = (j.message || 'Transmission sent.') + (j.transmission_id ? '\n\nID: ' + j.transmission_id : '');
+          out.classList.add('success');
+        }
       } catch (e) {
         out.textContent = 'Error: ' + e.message + '\n\nIs the Arcium service running?';
         out.classList.add('error');
@@ -669,12 +791,12 @@
 
       if (!msg) { out.textContent = 'Enter a message'; out.classList.add('error'); out.style.display = 'block'; return; }
       if (mode === 'secure' && !password) { out.textContent = 'Password required for secure mode'; out.classList.add('error'); out.style.display = 'block'; return; }
-      if (arciumOn && !arciumReady) { out.textContent = 'Connect to Arcium first (toggle on and wait for connection)'; out.classList.add('error'); out.style.display = 'block'; return; }
-      if (arciumOn && msg.length > 4) { out.textContent = 'Arcium MPC supports max 4 characters. Use local encode for longer messages.'; out.classList.add('error'); out.style.display = 'block'; return; }
+      if (arciumOn && !arciumReady && mode !== 'splitkey') { out.textContent = 'Connect to Arcium first (toggle on and wait for connection)'; out.classList.add('error'); out.style.display = 'block'; return; }
+      if (arciumOn && msg.length > 4 && mode !== 'splitkey') { out.textContent = 'Arcium MPC supports max 4 characters. Use local encode for longer messages.'; out.classList.add('error'); out.style.display = 'block'; return; }
 
       out.classList.remove('error', 'success');
       try {
-        if (arciumOn) {
+        if (arciumOn && mode !== 'splitkey') {
           const r = await fetch(ARCIUM_URL + '/encode-mpc', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -700,6 +822,7 @@
           else {
             let txt = j.dna_sequence + (j.stats ? '\n\n' + j.stats.length + ' bases, GC: ' + j.stats.gc_content + '%' : '');
             if (j.transaction_signature) txt += '\n\nAttested on Solana: ' + j.transaction_signature + '\nhttps://explorer.solana.com/tx/' + j.transaction_signature + '?cluster=devnet';
+            if (mode === 'splitkey' && j.k1_base64) txt += '\n\n[Split Key] Save K1 securely. Escrow K2 via plasmid tab or POST /escrow-store. Transmission ID: ' + (j.transmission_id || '');
             out.textContent = txt;
             out.classList.add('success');
           }
@@ -720,6 +843,15 @@
 
       if (!seq) { out.textContent = 'Enter a DNA sequence'; out.classList.add('error'); out.style.display = 'block'; return; }
       if (mode === 'secure' && !password) { out.textContent = 'Password required for secure mode'; out.classList.add('error'); out.style.display = 'block'; return; }
+      if (mode === 'splitkey') {
+        const k1 = document.getElementById('decodeK1').value.trim();
+        const k2Source = document.getElementById('decodeK2Source').value;
+        const k2Paste = document.getElementById('decodeK2').value.trim();
+        const transmissionId = document.getElementById('decodeTransmissionId').value.trim();
+        if (!k1) { out.textContent = 'Enter K1 (base64)'; out.classList.add('error'); out.style.display = 'block'; return; }
+        if (k2Source === 'paste' && !k2Paste) { out.textContent = 'Enter K2 (base64)'; out.classList.add('error'); out.style.display = 'block'; return; }
+        if (k2Source === 'escrow' && !transmissionId) { out.textContent = 'Enter transmission ID to fetch K2 from escrow'; out.classList.add('error'); out.style.display = 'block'; return; }
+      }
 
       if (extractPayload) {
         const seqUpper = seq.toUpperCase();
@@ -744,12 +876,34 @@
         seq = seq.slice(payloadStart, payloadEnd);
       }
 
-      if (arciumOn && !arciumReady) { out.textContent = 'Connect to Arcium first (toggle on and wait for connection)'; out.classList.add('error'); out.style.display = 'block'; return; }
-      if (arciumOn && seq.length !== 16) { out.textContent = 'Arcium MPC requires exactly 16 DNA bases.'; out.classList.add('error'); out.style.display = 'block'; return; }
+      if (arciumOn && mode !== 'splitkey' && !arciumReady) { out.textContent = 'Connect to Arcium first (toggle on and wait for connection)'; out.classList.add('error'); out.style.display = 'block'; return; }
+      if (arciumOn && mode !== 'splitkey' && seq.length !== 16) { out.textContent = 'Arcium MPC requires exactly 16 DNA bases.'; out.classList.add('error'); out.style.display = 'block'; return; }
 
       out.classList.remove('error', 'success');
       try {
-        if (arciumOn) {
+        let k2Base64 = null;
+        if (mode === 'splitkey') {
+          const k2Source = document.getElementById('decodeK2Source').value;
+          if (k2Source === 'escrow') {
+            const transmissionId = document.getElementById('decodeTransmissionId').value.trim();
+            const rEscrow = await fetch(ARCIUM_URL + '/escrow-retrieve', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ transmission_id: transmissionId })
+            });
+            const jEscrow = await rEscrow.json();
+            if (!rEscrow.ok) {
+              out.textContent = 'Escrow error: ' + (jEscrow.error || JSON.stringify(jEscrow));
+              out.classList.add('error');
+              out.style.display = 'block';
+              return;
+            }
+            k2Base64 = jEscrow.k2;
+          } else {
+            k2Base64 = document.getElementById('decodeK2').value.trim();
+          }
+        }
+        if (arciumOn && mode !== 'splitkey') {
           const r = await fetch(ARCIUM_URL + '/decode-mpc', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -764,6 +918,10 @@
         } else {
           const body = { sequence: seq, mode };
           if (mode === 'secure') body.password = password;
+          if (mode === 'splitkey') {
+            body.k1_base64 = document.getElementById('decodeK1').value.trim();
+            body.k2_base64 = k2Base64;
+          }
           if (document.getElementById('decodeOnChain').checked) body.decode_on_chain = true;
           const r = await fetch(API + '/api/decode', {
             method: 'POST',

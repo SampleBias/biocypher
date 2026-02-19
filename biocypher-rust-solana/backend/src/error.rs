@@ -69,6 +69,9 @@ pub enum DNACryptoError {
     #[error("Password required for secure mode")]
     PasswordRequired,
 
+    #[error("K1 and K2 required for split-key mode")]
+    SplitKeyRequired,
+
     #[error("Password too weak: {0}")]
     PasswordWeak(String),
 }

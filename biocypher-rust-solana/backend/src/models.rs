@@ -23,6 +23,10 @@ pub struct EncodeRequest {
     /// Store on blockchain (Phase 2)
     #[serde(default, skip_serializing_if = "is_false")]
     pub store_on_chain: bool,
+
+    /// Escrow URL for split-key mode (optional; auto-send K2)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub escrow_url: Option<String>,
 }
 
 /// Default encoding mode
@@ -48,6 +52,18 @@ pub struct EncodeResponse {
 
     /// Sequence statistics
     pub stats: SequenceStats,
+
+    /// K1 for split-key mode (user keeps)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub k1_base64: Option<String>,
+
+    /// K2 for split-key mode (escrow)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub k2_base64: Option<String>,
+
+    /// Transmission ID for split-key mode
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transmission_id: Option<String>,
 }
 
 /// Decode request model
@@ -64,6 +80,14 @@ pub struct DecodeRequest {
     /// Password for secure mode (required if mode == Secure)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
+
+    /// K1 for split-key mode (required if mode == SplitKey)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub k1_base64: Option<String>,
+
+    /// K2 for split-key mode (required if mode == SplitKey)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub k2_base64: Option<String>,
 
     /// Decode on blockchain (Phase 2)
     #[serde(default, skip_serializing_if = "is_false")]

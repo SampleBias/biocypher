@@ -22,6 +22,12 @@ const MANUFACTURER_API_URL = process.env.MANUFACTURER_API_URL || "";
 const TRANSMIT_MOCK = process.env.TRANSMIT_MOCK === "true";
 const USE_BUILTIN_MOCK = process.env.USE_BUILTIN_MOCK === "true";
 
+/** In-memory key escrow store: transmission_id -> { k2, owner_id?, expires_at? } */
+const escrowStore = new Map<
+  string,
+  { k2: string; owner_id?: string; expires_at?: number }
+>();
+
 const client = new ArciumClient({
   rpcUrl: RPC_URL,
   keypairPath: KEYPAIR_PATH,
@@ -110,6 +116,148 @@ app.post("/decode-mpc", async (req, res) => {
     });
   } catch (e) {
     console.error("decode-mpc error:", e);
+    res.status(500).json({
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+});
+
+/**
+ * Key escrow: store K2 for split-key mode.
+ * Body: { transmission_id, k2, owner_id?, expires_at? }
+ */
+app.post("/escrow-store", (req, res) => {
+  try {
+    const { transmission_id, k2, owner_id, expires_at } = req.body;
+    if (typeof transmission_id !== "string" || !transmission_id.trim()) {
+      res.status(400).json({ error: "transmission_id (string) required" });
+      return;
+    }
+    if (typeof k2 !== "string" || !k2.trim()) {
+      res.status(400).json({ error: "k2 (string, base64) required" });
+      return;
+    }
+    try {
+      const decoded = Buffer.from(k2, "base64");
+      if (decoded.length !== 32) {
+        res.status(400).json({ error: "k2 must decode to 32 bytes" });
+        return;
+      }
+    } catch {
+      res.status(400).json({ error: "k2 must be valid base64" });
+      return;
+    }
+    const expiresAt =
+      typeof expires_at === "string" && expires_at
+        ? new Date(expires_at).getTime()
+        : undefined;
+    escrowStore.set(transmission_id.trim(), {
+      k2: k2.trim(),
+      owner_id: typeof owner_id === "string" ? owner_id : undefined,
+      expires_at: expiresAt,
+    });
+    res.json({ stored: true, transmission_id: transmission_id.trim() });
+  } catch (e) {
+    console.error("escrow-store error:", e);
+    res.status(500).json({
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+});
+
+/**
+ * Key escrow: retrieve K2 by transmission_id.
+ * Body: { transmission_id, owner_id? }
+ */
+app.post("/escrow-retrieve", (req, res) => {
+  try {
+    const { transmission_id, owner_id } = req.body;
+    if (typeof transmission_id !== "string" || !transmission_id.trim()) {
+      res.status(400).json({ error: "transmission_id (string) required" });
+      return;
+    }
+    const entry = escrowStore.get(transmission_id.trim());
+    if (!entry) {
+      res.status(404).json({ error: "transmission_id not found" });
+      return;
+    }
+    if (entry.expires_at && Date.now() > entry.expires_at) {
+      escrowStore.delete(transmission_id.trim());
+      res.status(404).json({ error: "transmission expired" });
+      return;
+    }
+    if (entry.owner_id && typeof owner_id === "string" && entry.owner_id !== owner_id) {
+      res.status(403).json({ error: "owner_id mismatch" });
+      return;
+    }
+    res.json({ k2: entry.k2 });
+  } catch (e) {
+    console.error("escrow-retrieve error:", e);
+    res.status(500).json({
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+});
+
+/**
+ * Transmit split-key plasmid: send FASTA directly to manufacturer (no encryption).
+ * The DNA sequence encodes ciphertext; manufacturer has no key.
+ * Body: { fasta, instructions?, manufacturer_url? }
+ */
+app.post("/transmit-split-key", async (req, res) => {
+  try {
+    const { fasta, instructions, manufacturer_url } = req.body;
+    if (typeof fasta !== "string" || !fasta.trim()) {
+      res.status(400).json({ error: "fasta (string) required" });
+      return;
+    }
+    let targetUrl = (manufacturer_url || MANUFACTURER_API_URL).trim();
+    if (USE_BUILTIN_MOCK && !manufacturer_url) {
+      targetUrl = `http://127.0.0.1:${PORT}/transmit-receive`;
+    }
+    const transmissionId = randomUUID();
+    const payload = {
+      transmission_id: transmissionId,
+      fasta: fasta.trim(),
+      instructions: instructions ?? null,
+      source: "biocypher-split-key",
+      timestamp: new Date().toISOString(),
+    };
+
+    if ((!targetUrl && !USE_BUILTIN_MOCK) || TRANSMIT_MOCK) {
+      if (TRANSMIT_MOCK || !targetUrl) {
+        console.log("[transmit-split-key] Transmission received (mock/staging)", transmissionId);
+      }
+      res.json({
+        message: TRANSMIT_MOCK
+          ? "Split-key transmission accepted (mock mode)"
+          : "Split-key transmission accepted. Set MANUFACTURER_API_URL or provide manufacturer_url for production.",
+        transmission_id: transmissionId,
+      });
+      return;
+    }
+
+    const fwd = await fetch(targetUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!fwd.ok) {
+      const errText = await fwd.text();
+      res.status(502).json({
+        error: `Manufacturer API error (${fwd.status}): ${errText}`,
+        transmission_id: transmissionId,
+      });
+      return;
+    }
+    const fwdJson = await fwd.json().catch(() => ({}));
+    res.json({
+      message: "Split-key transmission sent to manufacturer",
+      transmission_id: transmissionId,
+      manufacturer_response: fwdJson,
+    });
+  } catch (e) {
+    console.error("transmit-split-key error:", e);
     res.status(500).json({
       error: e instanceof Error ? e.message : String(e),
     });

@@ -24,13 +24,14 @@
 
 ## Overview
 
-Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital data. It supports three encoding modes, **Arcium-powered MPC** for privacy-preserving computation, a **Plasmid Designer** for creating expression-ready plasmids, and **secure transmission** to DNA manufacturers (Twist, IDT, VectorBuilder).
+Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital data. It supports four encoding modes, **Arcium-powered MPC** for privacy-preserving computation, a **Plasmid Designer** for creating expression-ready plasmids, **Split Key** for eliminating single points of failure in plasmid ordering, and **secure transmission** to DNA manufacturers (Twist, IDT, VectorBuilder).
 
 | Mode | Description | Use Case |
 |------|-------------|----------|
 | **Basic** | Simple binary→DNA mapping (00=A, 01=T, 10=C, 11=G) | Educational, simple encoding |
 | **Nanopore** | Triplet encoding, error correction, GC balancing, homopolymer avoidance | Nanopore sequencing optimization |
 | **Secure** | AES-256-CBC encryption + DNA encoding | Secure data storage |
+| **Split Key** | Random key K split into K1 (user) + K2 (escrow); manufacturer never receives key | Eliminate single point of failure in plasmid ordering |
 | **Arcium MPC** | Encrypted computation—message never decrypted on server | Confidential DNA encoding on Solana |
 
 ---
@@ -39,7 +40,7 @@ Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital da
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    ARCIUM MPC ENCRYPTED DNA ENCODING                         │
+│                    ARCIUM MPC ENCRYPTED DNA ENCODING                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │   Client                Solana / Arcium              MPC Cluster            │
@@ -48,14 +49,14 @@ Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital da
 │     │  2. Submit to MXE        │                            │               │
 │     │ ────────────────────────>│  3. Queue computation      │               │
 │     │                          │ ──────────────────────────>│               │
-│     │                          │                            │ 4. Compute   │
+│     │                          │                            │ 4. Compute    │
 │     │                          │                            │    in MPC     │
 │     │                          │  5. Callback (encrypted)   │               │
 │     │                          │<───────────────────────────│               │
 │     │  6. Decrypt DNA result   │                            │               │
-│     │<────────────────────────│                            │               │
+│     │<──────────────────────── │                                            │
 │     │                          │                            │               │
-│     └── Message & result stay encrypted end-to-end ────────────────────────┘
+│     └── Message & result stay encrypted end-to-end ──────────────────────── ┘
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -69,6 +70,7 @@ Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital da
 - **Plasmid Designer** — Convert messages to DNA, view in linear and circular format (SeqViz), export FASTA/TXT/Instructions
 - **Expression mode** — Optional eGFP fluorescence cassette and decoding markers for payload extraction
 - **Secure transmission** — Encrypt plasmid designs (AES-256-GCM) and transmit to DNA manufacturer APIs via Arcium service
+- **Split Key transmission** — Send ciphertext-as-DNA directly to manufacturer; K2 held in escrow; no single party has full key
 
 ---
 
@@ -85,8 +87,9 @@ Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital da
 | **Plasmid Designer** | ✅ Implemented (SeqViz, FASTA/TXT/Instructions export) |
 | **Expression Mode** | ✅ eGFP cassette, decoding markers, annotations |
 | **Secure Transmission** | ✅ Encrypted transmit to manufacturer via Arcium |
+| **Split Key Mode** | ✅ Encoded; split key + escrow + transmit-split-key |
 | **Arcium MXE** | ✅ Implemented (encode_basic, decode_basic) |
-| **Arcium Integration** | ✅ Backend `/api/arcium-info`, `/transmit-secure` |
+| **Arcium Integration** | ✅ Backend `/api/arcium-info`, `/transmit-secure`, `/escrow-store`, `/escrow-retrieve`, `/transmit-split-key` |
 | **CLI** | ✅ `bi0cyph3r` encode/decode/safety |
 | **Web UI** | ✅ Browser-based at `/app/` (Encode, Decode, Safety, Plasmid tabs) |
 | **Solana Programs** | ✅ biocypher-storage (attestation) |
@@ -111,6 +114,7 @@ Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital da
 # CLI usage
 bi0cyph3r encode "Hello World"
 bi0cyph3r decode "TACATCTTTCGATCGATCGG"
+bi0cyph3r encode "Secret" --mode splitkey   # Returns K1, K2 — save K1, escrow K2
 bi0cyph3r safety "ATCGATCGATCG"
 
 # Start server + Web UI
@@ -241,6 +245,21 @@ curl -X POST http://127.0.0.1:8080/api/encode \
   -d '{"message":"Secret","mode":"secure","password":"YourSecurePass123!"}'
 ```
 
+**Encode (Split Key mode — returns K1, K2, transmission_id):**
+```bash
+curl -X POST http://127.0.0.1:8080/api/encode \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Secret","mode":"splitkey"}'
+# Response includes dna_sequence, k1_base64, k2_base64, transmission_id
+```
+
+**Decode (Split Key mode — requires K1 and K2):**
+```bash
+curl -X POST http://127.0.0.1:8080/api/decode \
+  -H "Content-Type: application/json" \
+  -d '{"sequence":"ATCGATCG...","mode":"splitkey","k1_base64":"<base64>","k2_base64":"<base64>"}'
+```
+
 **Encode with Solana attestation** (requires deployed biocypher-storage + env configured):
 ```bash
 curl -X POST http://127.0.0.1:8080/api/encode \
@@ -275,7 +294,7 @@ curl -X POST http://127.0.0.1:8080/api/safety-screen \
 curl http://127.0.0.1:8080/api/arcium-info
 ```
 
-**Arcium service** (when running): encode-mpc, decode-mpc, transmit-secure — see [biocypher-arcium-service/README.md](biocypher-arcium-service/README.md).
+**Arcium service** (when running): encode-mpc, decode-mpc, transmit-secure, escrow-store, escrow-retrieve, transmit-split-key — see [biocypher-arcium-service/README.md](biocypher-arcium-service/README.md).
 
 ---
 
@@ -288,7 +307,7 @@ biocypher/
 │   │   └── src/
 │   │       ├── api/             # HTTP endpoints
 │   │       ├── arcium/          # Arcium integration info
-│   │       ├── dna/             # Basic, Nanopore, Secure crypto
+│   │       ├── dna/             # Basic, Nanopore, Secure, Split Key crypto
 │   │       ├── safety/          # Pathogen & sequence screening
 │   │       └── main.rs
 │   ├── static/                 # Web UI (index.html, offline.html)
@@ -304,7 +323,7 @@ biocypher/
 │
 ├── biocypher-arcium-service/    # Node.js Arcium proxy (Solana CLI keypair)
 │   ├── src/
-│   │   ├── index.ts             # Express server (encode, decode, transmit-secure)
+│   │   ├── index.ts             # Express server (encode, decode, transmit-secure, escrow, transmit-split-key)
 │   │   └── arcium-client.ts     # Arcium encode/decode
 │   └── package.json
 │
@@ -338,18 +357,18 @@ biocypher/
 ## Arcium MXE Details
 
 ```
-  ┌──────────────────────────────────────────────────────────────┐
-  │  BI0CYPH3R MXE — MPC EXECUTION ENVIRONMENT                   │
-  ├──────────────────────────────────────────────────────────────┤
-  │                                                              │
+  ┌──────────────────────────────────────────────────────────────-┐
+  │  BI0CYPH3R MXE — MPC EXECUTION ENVIRONMENT                    │
+  ├──────────────────────────────────────────────────────────────-┤
+  │                                                               │
   │  Confidential Instructions (Arcis):                           │
   │  • encode_basic  — 4 bytes → 16 DNA bases (0=A, 1=T, 2=C, 3=G)│
   │  • decode_basic — 16 DNA bases → 4 bytes                      │
-  │                                                              │
+  │                                                               │
   │  Crypto: Rescue cipher + x25519 ECDH                          │
   │  Trust:  Cerberus (dishonest majority)                        │
-  │                                                              │
-  └──────────────────────────────────────────────────────────────┘
+  │                                                               │
+  └──────────────────────────────────────────────────────────────-┘
 ```
 
 | Instruction | Input | Output |
@@ -381,13 +400,15 @@ See [docs/ARCIUM_EDUCATIONAL_GUIDE.md](docs/ARCIUM_EDUCATIONAL_GUIDE.md) for ful
   "message": "Hello",
   "mode": "basic",
   "password": null,
-  "store_on_chain": false
+  "store_on_chain": false,
+  "escrow_url": null
 }
 ```
 
-- `mode`: `"basic"` | `"nanopore"` | `"secure"`
+- `mode`: `"basic"` | `"nanopore"` | `"secure"` | `"splitkey"`
 - `password`: Required for `secure` mode
 - `store_on_chain`: Optional — store attestation on Solana (requires `SOLANA_RPC_URL`, `SOLANA_KEYPAIR_PATH`, deployed `biocypher-storage` program)
+- `escrow_url`: Optional — for `splitkey` mode, URL to auto-send K2
 
 ### Encode Response
 
@@ -399,9 +420,18 @@ See [docs/ARCIUM_EDUCATIONAL_GUIDE.md](docs/ARCIUM_EDUCATIONAL_GUIDE.md) for ful
     "length": 20,
     "bases": {"a": 4, "t": 7, "c": 5, "g": 4},
     "gc_content": 45.0
-  }
+  },
+  "k1_base64": null,
+  "k2_base64": null,
+  "transmission_id": null
 }
 ```
+
+For `splitkey` mode, `k1_base64`, `k2_base64`, and `transmission_id` are populated. Save K1 securely; store K2 in escrow via `POST /escrow-store`.
+
+### Decode Request (Split Key)
+
+For `mode: "splitkey"`, include `k1_base64` and `k2_base64` (or fetch K2 from escrow via `POST /escrow-retrieve` using `transmission_id`).
 
 ---
 
@@ -510,6 +540,15 @@ These are listed in `.gitignore`. The program keypair in `biocypher-programs/tar
 - **Markers**: Same as Nanopore
 - **Speed**: ~20ms
 
+### Split Key Mode
+
+- **Encryption**: AES-256-CBC with random key K split into K1 (user) and K2 (escrow) via XOR
+- **Format**: Same as Secure (base64 ciphertext → DNA + markers)
+- **Key split**: K1 = random 32 bytes; K2 = K XOR K1
+- **Output**: `dna_sequence`, `k1_base64`, `k2_base64`, `transmission_id`
+- **Decode**: Requires both K1 and K2 (from user + escrow or both pasted)
+- **Speed**: ~25ms
+
 ---
 
 ## Safety Screener
@@ -535,16 +574,95 @@ Design plasmids from messages and export for DNA synthesis:
 
 ---
 
+## Split Key Mode — Eliminating the Single Point of Failure
+
+The weakest link in plasmid-based data storage is **ordering and retrieval**: when you send a sequence to a DNA manufacturer or receive a shipment, a single interception or compromise can expose the full message. **Split Key** mode addresses this by ensuring no single party ever has both the ciphertext and the decryption key.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  ENCODE                                                                         
+│  Message → AES-256-CBC(K) → ciphertext → DNA encoding → markers                 │
+│  K split: K1 = random, K2 = K XOR K1                                            │
+│  Output: dna_sequence, k1_base64 (user keeps), k2_base64 (escrow)               │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────--┐
+│  TRANSMISSION                                                                     │
+│  Provider A (DNA Manufacturer): Receives FASTA sequence only — ciphertext-as-DNA  │
+│  Provider B (Key Escrow):       Receives K2 only — no DNA, no plaintext           │
+│  User:                          Keeps K1 locally                                  │
+│  → No single party can decrypt                                                    │
+└─────────────────────────────────────────────────────────────────────────────────--┘
+
+┌───────────────────────────────────────────────────────────────────────────────── ┐
+│  DECODE                                                                          │
+│  Sequence plasmid → extract payload DNA → decode to base64 → parse crypto data   │
+│  Fetch K2 from escrow (or provide directly)                                      │
+│  K = K1 XOR K2 → AES decrypt → plaintext                                         │
+└───────────────────────────────────────────────────────────────────────────────── ┘
+```
+
+### Security Properties
+
+| Threat | Mitigation |
+|--------|------------|
+| Manufacturer compromised | Has ciphertext only; no key |
+| Key escrow compromised | Has K2 only; needs K1 + ciphertext |
+| Transmission intercepted | Attacker gets ciphertext or K2, not both |
+| Physical plasmid intercepted | Attacker gets ciphertext only |
+
+### Usage
+
+**CLI:**
+```bash
+# Encode — save K1, escrow K2
+bi0cyph3r encode "Secret message" --mode splitkey
+
+# Decode — provide K1 and K2
+bi0cyph3r decode "ATCGATCG..." --mode splitkey --k1 "<base64>" --k2 "<base64>"
+
+# Plasmid with split key
+bi0cyph3r plasmid "Secret" --mode splitkey --output json
+```
+
+**Web UI:** Select **Split Key** in Encode/Decode/Plasmid tabs. After encoding, use **Save K1** and **Escrow K2**. For decode, paste K1 and either paste K2 or fetch from escrow by transmission ID.
+
+**API:** `POST /api/encode` with `mode: "splitkey"` returns `dna_sequence`, `k1_base64`, `k2_base64`, `transmission_id`. `POST /api/decode` with `mode: "splitkey"` requires `k1_base64` and `k2_base64`.
+
+### Arcium Service Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /escrow-store` | Store K2 by transmission_id |
+| `POST /escrow-retrieve` | Fetch K2 by transmission_id |
+| `POST /transmit-split-key` | Send FASTA directly to manufacturer (no password) |
+
+For Split Key plasmids, **Transmit to Manufacturer** uses `transmit-split-key` — the sequence is sent as-is (it already encodes ciphertext). The manufacturer synthesizes DNA; they never receive a decryption key.
+
+---
+
 ## Secure Transmission to DNA Manufacturers
 
-Transmit plasmid designs to Twist, IDT, VectorBuilder, or custom APIs with end-to-end encryption:
+Two transmission flows are supported:
+
+### Password-based (Secure mode)
 
 - **Encryption** — AES-256-GCM, PBKDF2-SHA256 (100k iterations)
 - **Flow** — Design plasmid → Transmit (Arcium connected) → Enter password → Encrypted payload forwarded to manufacturer API
 - **Manufacturer** — Receives encrypted blob; decrypts with shared password
-- **Config** — `MANUFACTURER_API_URL` env var or per-request `manufacturer_url`
+- **Endpoint** — `POST /transmit-secure`
 
-See [biocypher-arcium-service/README.md](biocypher-arcium-service/README.md) for the `/transmit-secure` endpoint details.
+### Split Key (no password)
+
+- **Flow** — Design plasmid (Split Key mode) → Transmit → FASTA sent directly to manufacturer
+- **Manufacturer** — Receives sequence; synthesizes DNA (ciphertext); never receives key
+- **Endpoint** — `POST /transmit-split-key`
+
+**Config** — `MANUFACTURER_API_URL` env var or per-request `manufacturer_url`
+
+See [biocypher-arcium-service/README.md](biocypher-arcium-service/README.md) for endpoint details.
 
 ---
 
@@ -620,8 +738,8 @@ The Python reference implementation in `biocypher/` may have different licensing
 ---
 
 ```
-  ╔═══════════════════════════════════════════════════════════════╗
-  ║  Bi0cyph3r — DNA cryptography for the modern stack             ║
-  ║  Rust • Solana • Arcium MPC • Plasmid Designer • Secure Tx      ║
-  ╚═══════════════════════════════════════════════════════════════╝
+  ╔═══════════════════════════════════════════════════════════════----------╗
+  ║  Bi0cyph3r — DNA cryptography for the modern stack                      ║
+  ║  Rust • Solana • Arcium MPC • Split Key • Plasmid Designer • Secure Tx  ║
+  ╚═══════════════════════════════════════════════════════════════----------╝
 ```

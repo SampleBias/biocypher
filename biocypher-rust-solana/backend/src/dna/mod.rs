@@ -6,11 +6,13 @@
 pub mod basic;
 pub mod nanopore;
 pub mod secure;
+pub mod split_key;
 pub mod traits;
 
 pub use basic::DNACrypto;
 pub use nanopore::NanoporeDNACrypto;
 pub use secure::SecureDNACrypto;
+pub use split_key::SplitKeyDNACrypto;
 pub use traits::*;
 
 /// DNA base representation
@@ -73,6 +75,7 @@ pub enum EncodingMode {
     Basic,
     Nanopore,
     Secure,
+    SplitKey,
 }
 
 impl std::fmt::Display for EncodingMode {
@@ -81,6 +84,7 @@ impl std::fmt::Display for EncodingMode {
             EncodingMode::Basic => write!(f, "basic"),
             EncodingMode::Nanopore => write!(f, "nanopore"),
             EncodingMode::Secure => write!(f, "secure"),
+            EncodingMode::SplitKey => write!(f, "splitkey"),
         }
     }
 }
@@ -93,6 +97,7 @@ impl std::str::FromStr for EncodingMode {
             "basic" => Ok(EncodingMode::Basic),
             "nanopore" => Ok(EncodingMode::Nanopore),
             "secure" => Ok(EncodingMode::Secure),
+            "splitkey" => Ok(EncodingMode::SplitKey),
             _ => Err(format!("Invalid encoding mode: {}", s)),
         }
     }
@@ -125,9 +130,11 @@ mod tests {
         assert_eq!(EncodingMode::Basic.to_string(), "basic");
         assert_eq!(EncodingMode::Nanopore.to_string(), "nanopore");
         assert_eq!(EncodingMode::Secure.to_string(), "secure");
+        assert_eq!(EncodingMode::SplitKey.to_string(), "splitkey");
 
         assert_eq!("basic".parse::<EncodingMode>(), Ok(EncodingMode::Basic));
         assert_eq!("nanopore".parse::<EncodingMode>(), Ok(EncodingMode::Nanopore));
         assert_eq!("secure".parse::<EncodingMode>(), Ok(EncodingMode::Secure));
+        assert_eq!("splitkey".parse::<EncodingMode>(), Ok(EncodingMode::SplitKey));
     }
 }

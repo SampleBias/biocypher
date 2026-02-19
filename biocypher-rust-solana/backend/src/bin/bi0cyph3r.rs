@@ -12,6 +12,7 @@ use biocypher_backend::dna::{
     basic::DNACrypto,
     nanopore::NanoporeDNACrypto,
     secure::SecureDNACrypto,
+    split_key::SplitKeyDNACrypto,
     traits::{DNACoder, SequenceStats},
     EncodingMode,
 };
@@ -42,9 +43,11 @@ fn main() -> ExitCode {
     }
 }
 
-fn parse_mode(args: &[String]) -> (EncodingMode, Option<String>) {
+fn parse_mode(args: &[String]) -> (EncodingMode, Option<String>, Option<String>, Option<String>) {
     let mut mode = EncodingMode::Basic;
     let mut password = None;
+    let mut k1 = None;
+    let mut k2 = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -52,17 +55,24 @@ fn parse_mode(args: &[String]) -> (EncodingMode, Option<String>) {
             mode = match args[i + 1].to_lowercase().as_str() {
                 "nanopore" => EncodingMode::Nanopore,
                 "secure" => EncodingMode::Secure,
+                "splitkey" => EncodingMode::SplitKey,
                 _ => EncodingMode::Basic,
             };
             i += 2;
         } else if (args[i] == "--password" || args[i] == "-p") && i + 1 < args.len() {
             password = Some(args[i + 1].clone());
             i += 2;
+        } else if args[i] == "--k1" && i + 1 < args.len() {
+            k1 = Some(args[i + 1].clone());
+            i += 2;
+        } else if args[i] == "--k2" && i + 1 < args.len() {
+            k2 = Some(args[i + 1].clone());
+            i += 2;
         } else {
             i += 1;
         }
     }
-    (mode, password)
+    (mode, password, k1, k2)
 }
 
 fn run_encode(args: &[String]) -> ExitCode {
@@ -73,7 +83,7 @@ fn run_encode(args: &[String]) -> ExitCode {
     }
 
     let message = &args[0];
-    let (mode, password) = parse_mode(args);
+    let (mode, password, _k1, _k2) = parse_mode(args);
 
     if matches!(mode, EncodingMode::Secure) && password.is_none() {
         eprintln!("Error: secure mode requires --password");
@@ -81,26 +91,34 @@ fn run_encode(args: &[String]) -> ExitCode {
     }
 
     let result = match mode {
-        EncodingMode::Basic => DNACrypto::encode_message(message),
-        EncodingMode::Nanopore => NanoporeDNACrypto::encode_message(message),
+        EncodingMode::Basic => DNACrypto::encode_message(message).map(|d| (d, None, None)),
+        EncodingMode::Nanopore => NanoporeDNACrypto::encode_message(message).map(|d| (d, None, None)),
         EncodingMode::Secure => {
             let pwd = password.as_ref().unwrap();
-            SecureDNACrypto::encode_with_password(message, pwd)
+            SecureDNACrypto::encode_with_password(message, pwd).map(|d| (d, None, None))
+        }
+        EncodingMode::SplitKey => {
+            SplitKeyDNACrypto::encode_with_split_keys(message).map(|(d, k1, k2)| (d, Some(k1), Some(k2)))
         }
     };
 
     match result {
-        Ok(dna) => {
+        Ok((dna, k1_opt, k2_opt)) => {
             println!("{}", dna);
             let stats = match mode {
                 EncodingMode::Basic => DNACrypto::get_sequence_stats(&dna),
                 EncodingMode::Nanopore => NanoporeDNACrypto::get_sequence_stats(&dna),
                 EncodingMode::Secure => SecureDNACrypto::get_sequence_stats(&dna),
+                EncodingMode::SplitKey => SplitKeyDNACrypto::get_sequence_stats(&dna),
             };
             eprintln!(
                 "  [{} bases, GC: {:.1}%]",
                 stats.length, stats.gc_content
             );
+            if let (Some(k1), Some(k2)) = (k1_opt, k2_opt) {
+                eprintln!("  K1 (save securely): {}", k1);
+                eprintln!("  K2 (escrow): {}", k2);
+            }
             ExitCode::SUCCESS
         }
         Err(e) => {
@@ -118,10 +136,15 @@ fn run_decode(args: &[String]) -> ExitCode {
     }
 
     let sequence = &args[0];
-    let (mode, password) = parse_mode(args);
+    let (mode, password, k1, k2) = parse_mode(args);
 
     if matches!(mode, EncodingMode::Secure) && password.is_none() {
         eprintln!("Error: secure mode requires --password");
+        return ExitCode::FAILURE;
+    }
+
+    if matches!(mode, EncodingMode::SplitKey) && (k1.is_none() || k2.is_none()) {
+        eprintln!("Error: splitkey mode requires --k1 and --k2");
         return ExitCode::FAILURE;
     }
 
@@ -131,6 +154,11 @@ fn run_decode(args: &[String]) -> ExitCode {
         EncodingMode::Secure => {
             let pwd = password.as_ref().unwrap();
             SecureDNACrypto::decode_with_password(sequence, pwd)
+        }
+        EncodingMode::SplitKey => {
+            let k1 = k1.as_ref().unwrap();
+            let k2 = k2.as_ref().unwrap();
+            SplitKeyDNACrypto::decode_with_split_keys(sequence, k1, k2)
         }
     };
 
@@ -166,6 +194,7 @@ fn parse_plasmid_args(args: &[String]) -> Option<(String, EncodingMode, Option<S
             mode = match args[i + 1].to_lowercase().as_str() {
                 "nanopore" => EncodingMode::Nanopore,
                 "secure" => EncodingMode::Secure,
+                "splitkey" => EncodingMode::SplitKey,
                 _ => EncodingMode::Basic,
             };
             i += 2;
@@ -214,20 +243,24 @@ fn run_plasmid(args: &[String]) -> ExitCode {
     }
 
     let result = match mode {
-        EncodingMode::Basic => DNACrypto::encode_message(&message),
-        EncodingMode::Nanopore => NanoporeDNACrypto::encode_message(&message),
+        EncodingMode::Basic => DNACrypto::encode_message(&message).map(|s| (s, None, None)),
+        EncodingMode::Nanopore => NanoporeDNACrypto::encode_message(&message).map(|s| (s, None, None)),
         EncodingMode::Secure => {
             let pwd = password.as_ref().unwrap();
-            SecureDNACrypto::encode_with_password(&message, pwd)
+            SecureDNACrypto::encode_with_password(&message, pwd).map(|s| (s, None, None))
+        }
+        EncodingMode::SplitKey => {
+            SplitKeyDNACrypto::encode_with_split_keys(&message).map(|(s, k1, k2)| (s, Some(k1), Some(k2)))
         }
     };
 
     match result {
-        Ok(sequence) => {
+        Ok((sequence, k1_opt, k2_opt)) => {
             let stats = match mode {
                 EncodingMode::Basic => DNACrypto::get_sequence_stats(&sequence),
                 EncodingMode::Nanopore => NanoporeDNACrypto::get_sequence_stats(&sequence),
                 EncodingMode::Secure => SecureDNACrypto::get_sequence_stats(&sequence),
+                EncodingMode::SplitKey => SplitKeyDNACrypto::get_sequence_stats(&sequence),
             };
             match output {
                 PlasmidOutput::Fasta => {
@@ -237,15 +270,23 @@ fn run_plasmid(args: &[String]) -> ExitCode {
                     println!("{}", sequence);
                 }
                 PlasmidOutput::Json => {
-                    let instructions = serde_json::json!({
+                    let mut instructions = serde_json::json!({
                         "name": name,
                         "sequence": sequence,
                         "mode": format!("{}", mode),
                         "message_length": message.len(),
                         "gc_content": stats.gc_content,
                     });
+                    if let (Some(ref k1), Some(ref k2)) = (&k1_opt, &k2_opt) {
+                        instructions["k1_base64"] = serde_json::json!(k1);
+                        instructions["k2_base64"] = serde_json::json!(k2);
+                    }
                     println!("{}", serde_json::to_string_pretty(&instructions).unwrap_or_default());
                 }
+            }
+            if let (Some(ref k1), Some(ref k2)) = (&k1_opt, &k2_opt) {
+                eprintln!("  K1 (save securely): {}", k1);
+                eprintln!("  K2 (escrow): {}", k2);
             }
             ExitCode::SUCCESS
         }
@@ -289,15 +330,17 @@ fn print_usage(prog: &str) {
     eprintln!("Bi0cyph3r — DNA cryptography CLI");
     eprintln!();
     eprintln!("Usage:");
-    eprintln!("  {} encode <message> [--mode basic|nanopore|secure] [--password PASS]", name);
-    eprintln!("  {} decode <sequence> [--mode basic|nanopore|secure] [--password PASS]", name);
+    eprintln!("  {} encode <message> [--mode basic|nanopore|secure|splitkey] [--password PASS]", name);
+    eprintln!("  {} decode <sequence> [--mode basic|nanopore|secure|splitkey] [--password PASS] [--k1 K1] [--k2 K2]", name);
     eprintln!("  {} safety <sequence>", name);
-    eprintln!("  {} plasmid <message> [--mode basic|nanopore|secure] [--password PASS] [--name NAME] [--output fasta|txt|json]", name);
+    eprintln!("  {} plasmid <message> [--mode basic|nanopore|secure|splitkey] [--password PASS] [--name NAME] [--output fasta|txt|json]", name);
     eprintln!();
     eprintln!("Examples:");
     eprintln!("  {} encode \"Hello World\"", name);
     eprintln!("  {} encode \"Secret\" --mode secure --password mypass", name);
+    eprintln!("  {} encode \"Secret\" --mode splitkey", name);
     eprintln!("  {} decode \"TACATCTTTCG...\"", name);
+    eprintln!("  {} decode \"ATCG...\" --mode splitkey --k1 <base64> --k2 <base64>", name);
     eprintln!("  {} safety \"ATCGATCGATCG\"", name);
     eprintln!("  {} plasmid \"Hi\" --output fasta", name);
 }

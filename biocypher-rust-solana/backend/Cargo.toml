@@ -32,6 +32,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 regex = { workspace = true }
 hex = { workspace = true }
+uuid = { workspace = true }
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
 

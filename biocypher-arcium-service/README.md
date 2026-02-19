@@ -1,6 +1,6 @@
 # Bi0cyph3r Arcium Service
 
-Node.js HTTP service for Arcium MPC encode/decode. Uses Solana CLI keypair (`~/.config/solana/id.json`).
+Node.js HTTP service for Arcium MPC encode/decode, secure plasmid transmission, and **Split Key** escrow. Uses Solana CLI keypair (`~/.config/solana/id.json`).
 
 ## Prerequisites
 
@@ -44,8 +44,25 @@ MXE_PATH=. node ../biocypher-arcium-service/dist/index.js
 | GET | /status | Arcium readiness (connects to MXE) |
 | POST | /encode-mpc | Encode 4 bytes → 16 DNA bases |
 | POST | /decode-mpc | Decode 16 DNA bases → 4 bytes |
-| POST | /transmit-secure | Forward encrypted plasmid to manufacturer API |
+| POST | /transmit-secure | Forward encrypted plasmid to manufacturer API (password-based) |
+| POST | /transmit-split-key | Forward FASTA directly to manufacturer (Split Key mode; no password) |
+| POST | /escrow-store | Store K2 for Split Key mode |
+| POST | /escrow-retrieve | Retrieve K2 by transmission_id |
 | POST | /transmit-receive | Mock manufacturer receiver (for testing) |
+
+### Split Key Endpoints
+
+**POST /escrow-store** — Store K2 for later retrieval.
+- Body: `{ transmission_id, k2, owner_id?, expires_at? }`
+- `k2`: Base64-encoded 32 bytes
+
+**POST /escrow-retrieve** — Fetch K2 by transmission_id.
+- Body: `{ transmission_id, owner_id? }`
+- Returns: `{ k2 }`
+
+**POST /transmit-split-key** — Send FASTA + instructions directly to manufacturer.
+- Body: `{ fasta, instructions?, manufacturer_url? }`
+- No encryption; the DNA sequence encodes ciphertext; manufacturer has no key
 
 ## Mock Manufacturer Testing
 

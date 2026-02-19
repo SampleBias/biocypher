@@ -113,7 +113,7 @@ impl SecureDNACrypto {
         key
     }
 
-    /// Encrypt message, returns (ciphertext, iv, salt)
+    /// Encrypt message with password, returns (ciphertext, iv, salt)
     fn encrypt_message(
         plaintext: &str,
         password: &str,
@@ -124,16 +124,22 @@ impl SecureDNACrypto {
         rand::thread_rng().fill_bytes(&mut iv);
 
         let key = Self::derive_key(password, &salt);
-
-        let plaintext_bytes = plaintext.as_bytes();
-        let cipher = Aes256CbcEnc::new_from_slices(&key, &iv)
-            .map_err(|e| DNACryptoError::EncryptionError(e.to_string()))?;
-        let ciphertext = cipher.encrypt_padded_vec_mut::<Pkcs7>(plaintext_bytes);
-
+        let ciphertext = Self::encrypt_with_key(plaintext.as_bytes(), &key, &iv)?;
         Ok((ciphertext, iv, salt))
     }
 
-    /// Decrypt message
+    /// Encrypt plaintext with raw key and IV. Returns ciphertext.
+    pub fn encrypt_with_key(
+        plaintext: &[u8],
+        key: &[u8; Self::KEY_SIZE],
+        iv: &[u8; Self::IV_SIZE],
+    ) -> Result<Vec<u8>> {
+        let cipher = Aes256CbcEnc::new_from_slices(key, iv)
+            .map_err(|e| DNACryptoError::EncryptionError(e.to_string()))?;
+        Ok(cipher.encrypt_padded_vec_mut::<Pkcs7>(plaintext))
+    }
+
+    /// Decrypt message with password
     fn decrypt_message(
         ciphertext: &[u8],
         iv: &[u8],
@@ -141,8 +147,16 @@ impl SecureDNACrypto {
         password: &str,
     ) -> Result<String> {
         let key = Self::derive_key(password, salt);
+        Self::decrypt_with_key(ciphertext, &key, iv)
+    }
 
-        let cipher = Aes256CbcDec::new_from_slices(&key, iv)
+    /// Decrypt ciphertext with raw key. Returns plaintext string.
+    pub fn decrypt_with_key(
+        ciphertext: &[u8],
+        key: &[u8; Self::KEY_SIZE],
+        iv: &[u8],
+    ) -> Result<String> {
+        let cipher = Aes256CbcDec::new_from_slices(key, iv)
             .map_err(|e| DNACryptoError::DecryptionError(e.to_string()))?;
         let decrypted = cipher
             .decrypt_padded_vec_mut::<Pkcs7>(ciphertext)
@@ -152,8 +166,8 @@ impl SecureDNACrypto {
             .map_err(|e| DNACryptoError::DecryptionError(e.to_string()).into())
     }
 
-    /// Serialize crypto data to base64 string
-    fn crypto_data_to_string(
+    /// Serialize crypto data to base64 string (public for split_key reuse)
+    pub fn crypto_data_to_string(
         encrypted_data: &[u8],
         iv: &[u8],
         salt: &[u8],
@@ -168,8 +182,8 @@ impl SecureDNACrypto {
         Ok(BASE64.encode(&combined))
     }
 
-    /// Parse base64 string to crypto data
-    fn string_to_crypto_data(crypto_string: &str) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+    /// Parse base64 string to crypto data (public for split_key reuse)
+    pub fn string_to_crypto_data(crypto_string: &str) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
         let combined = BASE64
             .decode(crypto_string.as_bytes())
             .map_err(|e| DNACryptoError::DecryptionError(format!("Invalid base64: {}", e)))?;
@@ -206,8 +220,8 @@ impl SecureDNACrypto {
         Ok((encrypted_data, iv, salt))
     }
 
-    /// Remove start/stop markers
-    fn remove_markers(sequence: &str) -> String {
+    /// Remove start/stop markers (public for split_key reuse)
+    pub fn remove_markers(sequence: &str) -> String {
         let mut seq = sequence.to_string();
         if seq.starts_with(markers::START_MARKER) {
             seq = seq[markers::START_MARKER.len()..].to_string();
