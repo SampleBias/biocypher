@@ -4,6 +4,7 @@
 //!   bi0cyph3r encode "Hello" [--mode basic|nanopore|secure] [--password PASS]
 //!   bi0cyph3r decode "ATCG..." [--mode basic|nanopore|secure] [--password PASS]
 //!   bi0cyph3r safety "ATCG..."
+//!   bi0cyph3r plasmid "Hello" [--mode basic|nanopore|secure] [--password PASS] [--name NAME] [--output fasta|txt|json]
 
 use std::process::ExitCode;
 
@@ -28,6 +29,7 @@ fn main() -> ExitCode {
         "encode" => run_encode(&args[2..]),
         "decode" => run_decode(&args[2..]),
         "safety" | "screen" => run_safety(&args[2..]),
+        "plasmid" => run_plasmid(&args[2..]),
         "help" | "-h" | "--help" => {
             print_usage(&args[0]);
             ExitCode::SUCCESS
@@ -144,6 +146,116 @@ fn run_decode(args: &[String]) -> ExitCode {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PlasmidOutput {
+    Fasta,
+    Txt,
+    Json,
+}
+
+fn parse_plasmid_args(args: &[String]) -> Option<(String, EncodingMode, Option<String>, String, PlasmidOutput)> {
+    let mut message = None;
+    let mut mode = EncodingMode::Basic;
+    let mut password = None;
+    let mut name = "biocypher_plasmid".to_string();
+    let mut output = PlasmidOutput::Fasta;
+
+    let mut i = 0;
+    while i < args.len() {
+        if args[i] == "--mode" && i + 1 < args.len() {
+            mode = match args[i + 1].to_lowercase().as_str() {
+                "nanopore" => EncodingMode::Nanopore,
+                "secure" => EncodingMode::Secure,
+                _ => EncodingMode::Basic,
+            };
+            i += 2;
+        } else if (args[i] == "--password" || args[i] == "-p") && i + 1 < args.len() {
+            password = Some(args[i + 1].clone());
+            i += 2;
+        } else if args[i] == "--name" && i + 1 < args.len() {
+            name = args[i + 1].clone();
+            i += 2;
+        } else if args[i] == "--output" && i + 1 < args.len() {
+            output = match args[i + 1].to_lowercase().as_str() {
+                "txt" | "text" => PlasmidOutput::Txt,
+                "json" => PlasmidOutput::Json,
+                _ => PlasmidOutput::Fasta,
+            };
+            i += 2;
+        } else if !args[i].starts_with('-') {
+            message = Some(args[i].clone());
+            i += 1;
+        } else {
+            i += 1;
+        }
+    }
+    message.map(|m| (m, mode, password, name, output))
+}
+
+fn wrap_fasta(seq: &str, line_len: usize) -> String {
+    let mut out = String::with_capacity(seq.len() + seq.len() / line_len + 2);
+    for chunk in seq.as_bytes().chunks(line_len) {
+        out.push_str(std::str::from_utf8(chunk).unwrap_or(""));
+        out.push('\n');
+    }
+    out.trim_end().to_string()
+}
+
+fn run_plasmid(args: &[String]) -> ExitCode {
+    let Some((message, mode, password, name, output)) = parse_plasmid_args(args) else {
+        eprintln!("Error: plasmid requires a message");
+        eprintln!("  {} plasmid \"Your message\" [--name NAME] [--output fasta|txt|json]", std::env::args().next().unwrap_or_default());
+        return ExitCode::FAILURE;
+    };
+
+    if matches!(mode, EncodingMode::Secure) && password.is_none() {
+        eprintln!("Error: secure mode requires --password");
+        return ExitCode::FAILURE;
+    }
+
+    let result = match mode {
+        EncodingMode::Basic => DNACrypto::encode_message(&message),
+        EncodingMode::Nanopore => NanoporeDNACrypto::encode_message(&message),
+        EncodingMode::Secure => {
+            let pwd = password.as_ref().unwrap();
+            SecureDNACrypto::encode_with_password(&message, pwd)
+        }
+    };
+
+    match result {
+        Ok(sequence) => {
+            let stats = match mode {
+                EncodingMode::Basic => DNACrypto::get_sequence_stats(&sequence),
+                EncodingMode::Nanopore => NanoporeDNACrypto::get_sequence_stats(&sequence),
+                EncodingMode::Secure => SecureDNACrypto::get_sequence_stats(&sequence),
+            };
+            match output {
+                PlasmidOutput::Fasta => {
+                    println!(">{}\n{}", name, wrap_fasta(&sequence, 80));
+                }
+                PlasmidOutput::Txt => {
+                    println!("{}", sequence);
+                }
+                PlasmidOutput::Json => {
+                    let instructions = serde_json::json!({
+                        "name": name,
+                        "sequence": sequence,
+                        "mode": format!("{}", mode),
+                        "message_length": message.len(),
+                        "gc_content": stats.gc_content,
+                    });
+                    println!("{}", serde_json::to_string_pretty(&instructions).unwrap_or_default());
+                }
+            }
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            ExitCode::FAILURE
+        }
+    }
+}
+
 fn run_safety(args: &[String]) -> ExitCode {
     if args.is_empty() {
         eprintln!("Error: safety requires a DNA sequence");
@@ -180,10 +292,12 @@ fn print_usage(prog: &str) {
     eprintln!("  {} encode <message> [--mode basic|nanopore|secure] [--password PASS]", name);
     eprintln!("  {} decode <sequence> [--mode basic|nanopore|secure] [--password PASS]", name);
     eprintln!("  {} safety <sequence>", name);
+    eprintln!("  {} plasmid <message> [--mode basic|nanopore|secure] [--password PASS] [--name NAME] [--output fasta|txt|json]", name);
     eprintln!();
     eprintln!("Examples:");
     eprintln!("  {} encode \"Hello World\"", name);
     eprintln!("  {} encode \"Secret\" --mode secure --password mypass", name);
     eprintln!("  {} decode \"TACATCTTTCG...\"", name);
     eprintln!("  {} safety \"ATCGATCGATCG\"", name);
+    eprintln!("  {} plasmid \"Hi\" --output fasta", name);
 }

@@ -20,6 +20,7 @@ const MXE_PATH = process.env.MXE_PATH || process.cwd();
 const PROGRAM_ID = process.env.MXE_PROGRAM_ID || "EneGTgWJJwnxLeBkD128NtpuGQVCmq14cUnPCNEVyueE";
 const MANUFACTURER_API_URL = process.env.MANUFACTURER_API_URL || "";
 const TRANSMIT_MOCK = process.env.TRANSMIT_MOCK === "true";
+const USE_BUILTIN_MOCK = process.env.USE_BUILTIN_MOCK === "true";
 
 const client = new ArciumClient({
   rpcUrl: RPC_URL,
@@ -116,6 +117,25 @@ app.post("/decode-mpc", async (req, res) => {
 });
 
 /**
+ * Mock manufacturer receiver endpoint.
+ * Accepts encrypted transmissions for testing. Logs transmission_id and encrypted blob length.
+ */
+app.post("/transmit-receive", (req, res) => {
+  const { transmission_id, encrypted, source, timestamp } = req.body;
+  const encLen = typeof encrypted === "string" ? encrypted.length : 0;
+  console.log("[transmit-receive] Received transmission", {
+    transmission_id: transmission_id || "(none)",
+    encrypted_length: encLen,
+    source: source || "(none)",
+    timestamp: timestamp || "(none)",
+  });
+  res.json({
+    received: true,
+    transmission_id: transmission_id || randomUUID(),
+  });
+});
+
+/**
  * Secure transmission endpoint.
  * Forwards encrypted plasmid FASTA + instructions to DNA manufacturer API.
  * Payload stays encrypted end-to-end; manufacturer decrypts with shared password.
@@ -131,7 +151,10 @@ app.post("/transmit-secure", async (req, res) => {
       res.status(400).json({ error: "encrypted (string) required" });
       return;
     }
-    const targetUrl = (manufacturer_url || MANUFACTURER_API_URL).trim();
+    let targetUrl = (manufacturer_url || MANUFACTURER_API_URL).trim();
+    if (USE_BUILTIN_MOCK && !manufacturer_url) {
+      targetUrl = `http://127.0.0.1:${PORT}/transmit-receive`;
+    }
     const transmissionId = randomUUID();
     const payload = {
       transmission_id: transmissionId,
@@ -140,7 +163,7 @@ app.post("/transmit-secure", async (req, res) => {
       timestamp: new Date().toISOString(),
     };
 
-    if (!targetUrl || TRANSMIT_MOCK) {
+    if ((!targetUrl && !USE_BUILTIN_MOCK) || TRANSMIT_MOCK) {
       if (TRANSMIT_MOCK || !targetUrl) {
         console.log("[transmit-secure] Transmission received (mock/staging)", transmissionId);
       }

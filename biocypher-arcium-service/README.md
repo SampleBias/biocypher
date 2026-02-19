@@ -34,6 +34,7 @@ MXE_PATH=. node ../biocypher-arcium-service/dist/index.js
 | MXE_PROGRAM_ID | BioCyphMXE11111111111111111111111111111111 | Program ID |
 | MANUFACTURER_API_URL | (empty) | DNA manufacturer API endpoint (Twist, IDT, etc.) |
 | TRANSMIT_MOCK | false | If true, accept transmissions without forwarding |
+| USE_BUILTIN_MOCK | false | If true, forward to built-in /transmit-receive for testing |
 
 ## Endpoints
 
@@ -44,6 +45,17 @@ MXE_PATH=. node ../biocypher-arcium-service/dist/index.js
 | POST | /encode-mpc | Encode 4 bytes → 16 DNA bases |
 | POST | /decode-mpc | Decode 16 DNA bases → 4 bytes |
 | POST | /transmit-secure | Forward encrypted plasmid to manufacturer API |
+| POST | /transmit-receive | Mock manufacturer receiver (for testing) |
+
+## Mock Manufacturer Testing
+
+To test the secure transmission flow end-to-end without a real manufacturer API:
+
+```bash
+USE_BUILTIN_MOCK=true node dist/index.js
+```
+
+Then design a plasmid in the Web UI, connect Arcium, and click **Transmit to Manufacturer**. The encrypted payload will be forwarded to the built-in `/transmit-receive` endpoint, which logs the transmission and returns success.
 
 ## Limits
 

@@ -89,8 +89,8 @@ Bi0cyph3r is a DNA-based encoding system for storing and transmitting digital da
 | **Arcium Integration** | ✅ Backend `/api/arcium-info`, `/transmit-secure` |
 | **CLI** | ✅ `bi0cyph3r` encode/decode/safety |
 | **Web UI** | ✅ Browser-based at `/app/` (Encode, Decode, Safety, Plasmid tabs) |
-| **Solana Programs** | ⏳ Planned (Phase 2) |
-| **Solana Integration** | ⏳ Planned (Phase 3) |
+| **Solana Programs** | ✅ biocypher-storage (attestation) |
+| **Solana Integration** | ✅ store_on_chain, decode_on_chain, verify_on_chain |
 
 ---
 
@@ -149,6 +149,15 @@ cargo build --release --bin bi0cyph3r
 - **Web UI**: http://127.0.0.1:8080/app/
 
 **Web UI tabs**: Encode, Decode, Safety Screen, Plasmid (designer with linear/circular view, export, secure transmission)
+
+### Option 3b: Docker
+
+```bash
+docker compose up backend
+```
+
+- **API**: http://127.0.0.1:8080
+- **Web UI**: http://127.0.0.1:8080/app/
 
 ### Option 4: Arcium MPC (Secure Encryption)
 
@@ -356,7 +365,7 @@ See [docs/ARCIUM_EDUCATIONAL_GUIDE.md](docs/ARCIUM_EDUCATIONAL_GUIDE.md) for ful
 
 - `mode`: `"basic"` | `"nanopore"` | `"secure"`
 - `password`: Required for `secure` mode
-- `store_on_chain`: Reserved for Phase 3 (Solana)
+- `store_on_chain`: Optional — store attestation on Solana (requires `SOLANA_RPC_URL`, `SOLANA_KEYPAIR_PATH`, deployed `biocypher-storage` program)
 
 ### Encode Response
 
@@ -392,10 +401,18 @@ See [docs/ARCIUM_EDUCATIONAL_GUIDE.md](docs/ARCIUM_EDUCATIONAL_GUIDE.md) for ful
 - **Anchor** 0.32 — Solana program framework
 - **Solana** — Orchestration & verification
 
-### Planned (Phase 2–3)
+### Solana Attestation (Phase 2–3)
 
-- **Solana** — On-chain Encoder, Decoder, Safety programs
-- **Backend–Solana** — `store_on_chain`, `decode_on_chain`
+- **biocypher-storage** — On-chain attestation for encode, decode, safety (in `biocypher-programs/`)
+- **Backend–Solana** — `store_on_chain`, `decode_on_chain`, `verify_on_chain` when env configured
+
+**Env vars** (optional; if unset, on-chain features are no-op):
+
+- `SOLANA_RPC_URL` — Default: `http://127.0.0.1:8899` (localnet)
+- `SOLANA_KEYPAIR_PATH` — Default: `~/.config/solana/id.json`
+- `BIOCYPHER_STORAGE_PROGRAM_ID` — From `anchor keys list` in `biocypher-programs/`
+
+**Deploy**: `cd biocypher-programs && anchor build && anchor deploy`
 
 ---
 

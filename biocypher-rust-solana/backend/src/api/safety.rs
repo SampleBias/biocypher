@@ -4,9 +4,10 @@ use actix_web::{web, HttpResponse};
 use tracing::{info, error, instrument};
 use validator::Validate;
 
-use crate::safety::DNASafetyScreener;
 use crate::error::Result;
 use crate::models::{SafetyScreenRequest, SafetyScreenResponse};
+use crate::safety::DNASafetyScreener;
+use crate::solana::{hash_sequence, SolanaClient};
 
 /// Screen DNA sequence for safety
 #[instrument(skip(req))]
@@ -33,9 +34,20 @@ pub async fn safety_screen(
     let screener = DNASafetyScreener::new();
     let report = screener.perform_comprehensive_screening(&dna_sequence)?;
 
-    // TODO: Verify on blockchain if requested (Phase 2)
     let transaction_signature = if verify_on_chain {
-        None // Will implement in Phase 2
+        match SolanaClient::from_env() {
+            Some(client) => {
+                let seq_hash = hash_sequence(&dna_sequence);
+                match client.record_safety(seq_hash, report.safety_status).await {
+                    Ok(sig) => Some(sig),
+                    Err(e) => {
+                        error!("Solana record_safety failed: {}", e);
+                        None
+                    }
+                }
+            }
+            None => None,
+        }
     } else {
         None
     };

@@ -8,3 +8,4 @@ pub mod dna;
 pub mod error;
 pub mod models;
 pub mod safety;
+pub mod solana;

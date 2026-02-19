@@ -11,9 +11,8 @@ use crate::dna::{
     traits::{DNACoder, SequenceStats as TraitsSequenceStats},
 };
 use crate::error::Result;
-use crate::models::{
-    DecodeRequest, DecodeResponse, SequenceStats,
-};
+use crate::models::{DecodeRequest, DecodeResponse, SequenceStats};
+use crate::solana::{hash_sequence, SolanaClient};
 
 /// Decode DNA sequence to message
 #[instrument(skip(req))]
@@ -63,9 +62,20 @@ pub async fn decode_message(
         crate::dna::EncodingMode::Secure => SecureDNACrypto::get_sequence_stats(&sequence),
     };
 
-    // TODO: Decode on blockchain if requested (Phase 2)
     let transaction_signature = if decode_on_chain {
-        None // Will implement in Phase 2
+        match SolanaClient::from_env() {
+            Some(client) => {
+                let seq_hash = hash_sequence(&sequence);
+                match client.record_decode(mode, seq_hash).await {
+                    Ok(sig) => Some(sig),
+                    Err(e) => {
+                        error!("Solana record_decode failed: {}", e);
+                        None
+                    }
+                }
+            }
+            None => None,
+        }
     } else {
         None
     };

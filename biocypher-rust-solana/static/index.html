@@ -182,7 +182,7 @@
 <body>
   <div class="container">
     <h1>Bi0cyph3r</h1>
-    <p class="subtitle">DNA cryptography — encode and decode messages as DNA sequences · <a href="offline.html" style="color:var(--accent)">Offline (no server)</a></p>
+    <p class="subtitle">DNA cryptography — encode and decode messages as DNA sequences · <a href="offline.html" style="color:var(--accent)">Offline (no server) — Basic + Plasmid</a></p>
 
     <div class="card">
       <div class="arcium-row">
@@ -215,6 +215,10 @@
           <label>Password</label>
           <input type="password" id="encodePass" placeholder="Required for secure mode">
         </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="encodeStoreOnChain">
+          <label for="encodeStoreOnChain" style="margin-bottom:0">Store attestation on Solana</label>
+        </div>
         <button id="encodeBtn" style="margin-top:1rem">Encode</button>
         <div id="encodeOutput" class="output" style="display:none"></div>
       </div>
@@ -236,6 +240,10 @@
           <label>Password</label>
           <input type="password" id="decodePass" placeholder="Required for secure mode">
         </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="decodeOnChain">
+          <label for="decodeOnChain" style="margin-bottom:0">Record decode on Solana</label>
+        </div>
         <button id="decodeBtn" style="margin-top:1rem">Decode</button>
         <div id="decodeOutput" class="output" style="display:none"></div>
       </div>
@@ -243,6 +251,10 @@
       <div id="safety" class="tab-content">
         <label>DNA Sequence</label>
         <textarea id="safetyInput" placeholder="ATCGATCG..."></textarea>
+        <div class="checkbox-row">
+          <input type="checkbox" id="safetyVerifyOnChain">
+          <label for="safetyVerifyOnChain" style="margin-bottom:0">Verify on Solana</label>
+        </div>
         <button id="safetyBtn" style="margin-top:1rem">Screen</button>
         <div id="safetyOutput" class="output" style="display:none"></div>
       </div>
@@ -285,6 +297,7 @@
           <button id="exportFastaBtn">Export FASTA</button>
           <button id="exportTxtBtn">Export TXT</button>
           <button id="exportInstructionsBtn">Export Instructions</button>
+          <button id="screenPlasmidBtn">Screen plasmid</button>
           <button id="transmitBtn" title="Requires Arcium MPC">Transmit to Manufacturer</button>
         </div>
         <div id="plasmidTransmitWrap" class="plasmid-transmit-wrap hidden">
@@ -551,6 +564,35 @@
       downloadFile(json, plasmidDesign.name + '_instructions.json', 'application/json');
     });
 
+    document.getElementById('screenPlasmidBtn').addEventListener('click', async () => {
+      if (!plasmidDesign) return;
+      const out = document.getElementById('plasmidOutput');
+      out.classList.remove('error', 'success');
+      out.style.display = 'block';
+      out.textContent = 'Screening...';
+      try {
+        const r = await fetch(API + '/api/safety-screen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dna_sequence: plasmidDesign.sequence })
+        });
+        const j = await r.json();
+        if (!r.ok) {
+          out.textContent = j.error || JSON.stringify(j);
+          out.classList.add('error');
+          return;
+        }
+        let s = 'Status: ' + j.safety_status + ' ' + (j.safety_icon || '') + '\n';
+        s += 'GC content: ' + (j.sequence_characteristics?.gc_content || 'N/A') + '%\n';
+        if (j.recommendations?.length) s += '\nRecommendations: ' + j.recommendations.join('\n');
+        out.textContent = s;
+        out.classList.add('success');
+      } catch (e) {
+        out.textContent = 'Error: ' + e.message + '\n\nServer required for safety screen. Is it running? (cargo run)';
+        out.classList.add('error');
+      }
+    });
+
     async function deriveKey(password, salt) {
       const enc = new TextEncoder();
       const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
@@ -647,6 +689,7 @@
         } else {
           const body = { message: msg, mode };
           if (mode === 'secure') body.password = password;
+          if (document.getElementById('encodeStoreOnChain').checked) body.store_on_chain = true;
           const r = await fetch(API + '/api/encode', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -655,7 +698,9 @@
           const j = await r.json();
           if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
           else {
-            out.textContent = j.dna_sequence + (j.stats ? '\n\n' + j.stats.length + ' bases, GC: ' + j.stats.gc_content + '%' : '');
+            let txt = j.dna_sequence + (j.stats ? '\n\n' + j.stats.length + ' bases, GC: ' + j.stats.gc_content + '%' : '');
+            if (j.transaction_signature) txt += '\n\nAttested on Solana: ' + j.transaction_signature + '\nhttps://explorer.solana.com/tx/' + j.transaction_signature + '?cluster=devnet';
+            out.textContent = txt;
             out.classList.add('success');
           }
         }
@@ -719,6 +764,7 @@
         } else {
           const body = { sequence: seq, mode };
           if (mode === 'secure') body.password = password;
+          if (document.getElementById('decodeOnChain').checked) body.decode_on_chain = true;
           const r = await fetch(API + '/api/decode', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -727,7 +773,9 @@
           const j = await r.json();
           if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
           else {
-            out.textContent = j.decoded_message;
+            let txt = j.decoded_message;
+            if (j.transaction_signature) txt += '\n\nRecorded on Solana: ' + j.transaction_signature + '\nhttps://explorer.solana.com/tx/' + j.transaction_signature + '?cluster=devnet';
+            out.textContent = txt;
             out.classList.add('success');
           }
         }
@@ -746,10 +794,12 @@
 
       out.classList.remove('error', 'success');
       try {
+        const body = { dna_sequence: seq };
+        if (document.getElementById('safetyVerifyOnChain').checked) body.verify_on_chain = true;
         const r = await fetch(API + '/api/safety-screen', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ dna_sequence: seq })
+          body: JSON.stringify(body)
         });
         const j = await r.json();
         if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
@@ -757,6 +807,7 @@
           let s = 'Status: ' + j.safety_status + ' ' + (j.safety_icon || '') + '\n';
           s += 'GC content: ' + (j.sequence_characteristics?.gc_content || 'N/A') + '%\n';
           if (j.recommendations?.length) s += '\nRecommendations: ' + j.recommendations.join('\n');
+          if (j.transaction_signature) s += '\n\nVerified on Solana: ' + j.transaction_signature + '\nhttps://explorer.solana.com/tx/' + j.transaction_signature + '?cluster=devnet';
           out.textContent = s;
           out.classList.add('success');
         }

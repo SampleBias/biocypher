@@ -32,6 +32,8 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 regex = { workspace = true }
 hex = { workspace = true }
+solana-client = { workspace = true }
+solana-sdk = { workspace = true }
 
 # Additional dependencies
 validator = { version = "0.16", features = ["derive"] }

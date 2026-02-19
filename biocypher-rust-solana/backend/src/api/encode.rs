@@ -11,9 +11,8 @@ use crate::dna::{
     traits::{DNACoder, SequenceStats as TraitsSequenceStats},
 };
 use crate::error::Result;
-use crate::models::{
-    EncodeRequest, EncodeResponse, SequenceStats,
-};
+use crate::models::{EncodeRequest, EncodeResponse, SequenceStats};
+use crate::solana::{hash_sequence, SolanaClient};
 
 /// Encode message to DNA
 #[instrument(skip(req))]
@@ -63,9 +62,20 @@ pub async fn encode_message(
         crate::dna::EncodingMode::Secure => SecureDNACrypto::get_sequence_stats(&dna_sequence),
     };
 
-    // TODO: Store on blockchain if requested (Phase 2)
     let transaction_signature = if store_on_chain {
-        None // Will implement in Phase 2
+        match SolanaClient::from_env() {
+            Some(client) => {
+                let seq_hash = hash_sequence(&dna_sequence);
+                match client.record_encode(mode, seq_hash).await {
+                    Ok(sig) => Some(sig),
+                    Err(e) => {
+                        error!("Solana record_encode failed: {}", e);
+                        None
+                    }
+                }
+            }
+            None => None,
+        }
     } else {
         None
     };

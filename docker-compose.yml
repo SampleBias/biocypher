@@ -1,0 +1,11 @@
+# Bi0cyph3r - Docker Compose
+# Backend API + Web UI
+services:
+  backend:
+    build:
+      context: ./biocypher-rust-solana
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - BIND_ADDRESS=0.0.0.0:8080

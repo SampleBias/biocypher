@@ -75,12 +75,14 @@
     .error { color: #f85149; }
     .success { color: var(--success); }
     .muted { color: var(--muted); font-size: 0.8rem; }
+    .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+    .btn-row button { width: auto; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Bi0cyph3r — Offline</h1>
-    <span class="badge">No server — 100% local — Basic mode only</span>
+    <span class="badge">No server — 100% local — Basic mode + Plasmid</span>
     <p class="muted">Save this file and open it anywhere. No network, no server, no data leaves your device.</p>
 
     <div class="card">
@@ -95,6 +97,19 @@
       <textarea id="decodeInput" placeholder="Enter DNA sequence (ATCG)"></textarea>
       <button id="decodeBtn">Decode → Message</button>
       <div id="decodeOut" class="output" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <label>Plasmid (Basic mode only)</label>
+      <textarea id="plasmidInput" placeholder="Enter message to encode into DNA"></textarea>
+      <label>Plasmid name</label>
+      <input type="text" id="plasmidName" placeholder="biocypher_plasmid" value="biocypher_plasmid">
+      <button id="plasmidBtn">Design Plasmid</button>
+      <div id="plasmidOut" class="output" style="display:none"></div>
+      <div id="plasmidExportRow" class="btn-row" style="display:none">
+        <button id="plasmidCopyBtn">Copy FASTA</button>
+        <button id="plasmidDownloadBtn">Download FASTA</button>
+      </div>
     </div>
   </div>
 
@@ -166,6 +181,60 @@
       out.textContent = decode(seq) || '(empty)';
       out.className = 'output success';
       out.style.display = 'block';
+    });
+
+    function wrapFasta(seq, len) {
+      len = len || 80;
+      let out = '';
+      for (let i = 0; i < seq.length; i += len) {
+        out += seq.slice(i, i + len) + '\n';
+      }
+      return out.trim();
+    }
+
+    let plasmidSequence = null;
+
+    document.getElementById('plasmidBtn').addEventListener('click', () => {
+      const msg = document.getElementById('plasmidInput').value;
+      const name = document.getElementById('plasmidName').value.trim() || 'biocypher_plasmid';
+      const out = document.getElementById('plasmidOut');
+      const exportRow = document.getElementById('plasmidExportRow');
+      if (!msg) {
+        out.textContent = 'Enter a message';
+        out.className = 'output error';
+        out.style.display = 'block';
+        return;
+      }
+      plasmidSequence = encode(msg);
+      out.textContent = plasmidSequence + '\n\n' + plasmidSequence.length + ' bases';
+      out.className = 'output success';
+      out.style.display = 'block';
+      exportRow.style.display = 'flex';
+    });
+
+    document.getElementById('plasmidCopyBtn').addEventListener('click', () => {
+      if (!plasmidSequence) return;
+      const name = document.getElementById('plasmidName').value.trim() || 'biocypher_plasmid';
+      const fasta = '>' + name + '\n' + wrapFasta(plasmidSequence);
+      navigator.clipboard.writeText(fasta).then(() => {
+        const btn = document.getElementById('plasmidCopyBtn');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+      });
+    });
+
+    document.getElementById('plasmidDownloadBtn').addEventListener('click', () => {
+      if (!plasmidSequence) return;
+      const name = document.getElementById('plasmidName').value.trim() || 'biocypher_plasmid';
+      const fasta = '>' + name + '\n' + wrapFasta(plasmidSequence);
+      const blob = new Blob([fasta], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name + '.fasta';
+      a.click();
+      URL.revokeObjectURL(url);
     });
   </script>
 </body>
