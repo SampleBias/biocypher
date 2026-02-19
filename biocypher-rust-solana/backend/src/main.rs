@@ -28,7 +28,9 @@ async fn root() -> impl Responder {
             "encode": "/api/encode",
             "decode": "/api/decode",
             "safety_screen": "/api/safety-screen",
-            "arcium_info": "/api/arcium-info"
+            "arcium_info": "/api/arcium-info",
+            "solana_info": "/api/solana-info",
+            "build_attest_transaction": "/api/build-attest-transaction"
         }
     }))
 }
@@ -75,6 +77,11 @@ async fn main() -> std::io::Result<()> {
             .route("/api/decode", web::post().to(api::decode::decode_message))
             .route("/api/safety-screen", web::post().to(api::safety::safety_screen))
             .route("/api/arcium-info", web::get().to(arcium::arcium_info))
+            .route("/api/solana-info", web::get().to(api::solana::solana_info))
+            .route(
+                "/api/build-attest-transaction",
+                web::post().to(api::build_attest::build_attest_transaction_handler),
+            )
             .service(
                 actix_files::Files::new("/app", concat!(env!("CARGO_MANIFEST_DIR"), "/../static"))
                     .index_file("index.html"),

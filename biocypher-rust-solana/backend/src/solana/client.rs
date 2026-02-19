@@ -87,6 +87,21 @@ impl SolanaClient {
         self.keypair.is_some()
     }
 
+    /// Wallet pubkey (server keypair) for status display.
+    pub fn wallet_pubkey(&self) -> Option<Pubkey> {
+        self.keypair.as_ref().map(|k| k.pubkey())
+    }
+
+    /// Program ID for attestation.
+    pub fn program_id(&self) -> Pubkey {
+        self.program_id
+    }
+
+    /// RPC URL in use.
+    pub fn rpc_url(&self) -> &str {
+        &self.rpc_url
+    }
+
     fn payer(&self) -> Result<&Keypair> {
         self.keypair
             .as_ref()
@@ -262,4 +277,105 @@ pub fn hash_sequence(sequence: &str) -> [u8; 32] {
     let mut arr = [0u8; 32];
     arr.copy_from_slice(&result);
     arr
+}
+
+/// Build unsigned attestation transaction for user wallet signing.
+/// Does not require server keypair; uses RPC for blockhash only.
+pub async fn build_attest_transaction(
+    payer: Pubkey,
+    operation: &str,
+    sequence_hash: [u8; 32],
+    mode: Option<EncodingMode>,
+    status: Option<SafetyStatus>,
+) -> Result<Vec<u8>> {
+    let rpc_url = std::env::var("SOLANA_RPC_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:8899".to_string());
+    let program_id = Pubkey::from_str(
+        std::env::var("BIOCYPHER_STORAGE_PROGRAM_ID")
+            .as_deref()
+            .unwrap_or(DEFAULT_PROGRAM_ID),
+    )
+    .map_err(|_| BioCypherError::Solana("Invalid program ID".into()))?;
+
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    let ix = match operation {
+        "encode" => {
+            let mode = mode.ok_or_else(|| BioCypherError::Solana("mode required for encode".into()))?;
+            let (encode_record, _) = Pubkey::find_program_address(
+                &[b"encode", payer.as_ref(), &sequence_hash],
+                &program_id,
+            );
+            let mut data = instruction_discriminator("record_encode").to_vec();
+            data.push(encoding_mode_to_u8(mode));
+            data.extend_from_slice(&sequence_hash);
+            data.extend_from_slice(&timestamp.to_le_bytes());
+            Instruction {
+                program_id,
+                accounts: vec![
+                    AccountMeta::new(encode_record, false),
+                    AccountMeta::new(payer, true),
+                    AccountMeta::new_readonly(SYSTEM_PROGRAM_ID, false),
+                ],
+                data,
+            }
+        }
+        "decode" => {
+            let mode = mode.ok_or_else(|| BioCypherError::Solana("mode required for decode".into()))?;
+            let (decode_record, _) = Pubkey::find_program_address(
+                &[b"decode", payer.as_ref(), &sequence_hash],
+                &program_id,
+            );
+            let mut data = instruction_discriminator("record_decode").to_vec();
+            data.push(encoding_mode_to_u8(mode));
+            data.extend_from_slice(&sequence_hash);
+            data.extend_from_slice(&timestamp.to_le_bytes());
+            Instruction {
+                program_id,
+                accounts: vec![
+                    AccountMeta::new(decode_record, false),
+                    AccountMeta::new(payer, true),
+                    AccountMeta::new_readonly(SYSTEM_PROGRAM_ID, false),
+                ],
+                data,
+            }
+        }
+        "safety" => {
+            let status = status.ok_or_else(|| BioCypherError::Solana("status required for safety".into()))?;
+            let (safety_record, _) = Pubkey::find_program_address(
+                &[b"safety", payer.as_ref(), &sequence_hash],
+                &program_id,
+            );
+            let mut data = instruction_discriminator("record_safety").to_vec();
+            data.extend_from_slice(&sequence_hash);
+            data.push(safety_status_to_u8(status));
+            data.extend_from_slice(&timestamp.to_le_bytes());
+            Instruction {
+                program_id,
+                accounts: vec![
+                    AccountMeta::new(safety_record, false),
+                    AccountMeta::new(payer, true),
+                    AccountMeta::new_readonly(SYSTEM_PROGRAM_ID, false),
+                ],
+                data,
+            }
+        }
+        _ => return Err(BioCypherError::Solana(format!("Unknown operation: {}", operation)).into()),
+    };
+
+    let client = Arc::new(RpcClient::new_with_commitment(
+        rpc_url,
+        CommitmentConfig::confirmed(),
+    ));
+    let blockhash = client
+        .get_latest_blockhash()
+        .await
+        .map_err(|e| BioCypherError::Solana(e.to_string()))?;
+
+    let mut transaction = Transaction::new_with_payer(&[ix], Some(&payer));
+    transaction.message.recent_blockhash = blockhash;
+    bincode::serialize(&transaction).map_err(|e| BioCypherError::Solana(e.to_string()))
 }

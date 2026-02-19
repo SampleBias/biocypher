@@ -89,11 +89,18 @@ pub async fn decode_message(
                     Ok(sig) => Some(sig),
                     Err(e) => {
                         error!("Solana record_decode failed: {}", e);
-                        None
+                        return Ok(HttpResponse::InternalServerError().json(serde_json::json!({
+                            "error": format!("Solana attestation failed: {}", e)
+                        })));
                     }
                 }
             }
-            None => None,
+            None => {
+                error!("Solana not configured but decode_on_chain requested");
+                return Ok(HttpResponse::BadRequest().json(serde_json::json!({
+                    "error": "Solana attestation requested but not configured. Set SOLANA_KEYPAIR_PATH or connect a wallet."
+                })));
+            }
         }
     } else {
         None

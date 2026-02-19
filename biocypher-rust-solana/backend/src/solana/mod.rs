@@ -5,4 +5,4 @@
 
 pub mod client;
 
-pub use client::{hash_sequence, SolanaClient};
+pub use client::{build_attest_transaction, hash_sequence, SolanaClient};

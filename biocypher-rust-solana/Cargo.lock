@@ -582,6 +582,7 @@ dependencies = [
  "aes",
  "anyhow",
  "base64 0.21.7",
+ "bincode",
  "cbc",
  "derive_more 0.99.20",
  "hex",

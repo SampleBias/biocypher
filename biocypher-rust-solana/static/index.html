@@ -177,6 +177,24 @@
     .plasmid-transmit-wrap.hidden { display: none; }
     .plasmid-transmit-wrap label { margin-top: 0.75rem; }
     .plasmid-transmit-wrap label:first-of-type { margin-top: 0; }
+    .wallet-btn {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .wallet-btn:hover { opacity: 0.9; }
+    .wallet-address {
+      font-size: 0.75rem;
+      font-family: monospace;
+      opacity: 0.9;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   </style>
 </head>
 <body>
@@ -191,6 +209,15 @@
           <span class="toggle-label">Arcium MPC</span>
         </div>
         <span id="arciumStatus" class="arcium-status">Off — local encoding</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="arcium-row">
+        <span class="toggle-label">Solana Attestation</span>
+        <span id="solanaStatus" class="arcium-status">Checking…</span>
+        <button id="connectWalletBtn" class="wallet-btn" style="display:none">Connect Wallet</button>
+        <span id="walletAddress" class="wallet-address" style="display:none"></span>
       </div>
     </div>
 
@@ -222,6 +249,7 @@
         <div class="checkbox-row">
           <input type="checkbox" id="encodeStoreOnChain">
           <label for="encodeStoreOnChain" style="margin-bottom:0">Store attestation on Solana</label>
+          <span id="encodeSolanaHint" class="stats" style="margin-left:0.5rem"></span>
         </div>
         <button id="encodeBtn" style="margin-top:1rem">Encode</button>
         <div id="encodeOutput" class="output" style="display:none"></div>
@@ -265,6 +293,7 @@
         <div class="checkbox-row">
           <input type="checkbox" id="decodeOnChain">
           <label for="decodeOnChain" style="margin-bottom:0">Record decode on Solana</label>
+          <span id="decodeSolanaHint" class="stats" style="margin-left:0.5rem"></span>
         </div>
         <button id="decodeBtn" style="margin-top:1rem">Decode</button>
         <div id="decodeOutput" class="output" style="display:none"></div>
@@ -276,6 +305,7 @@
         <div class="checkbox-row">
           <input type="checkbox" id="safetyVerifyOnChain">
           <label for="safetyVerifyOnChain" style="margin-bottom:0">Verify on Solana</label>
+          <span id="safetySolanaHint" class="stats" style="margin-left:0.5rem"></span>
         </div>
         <button id="safetyBtn" style="margin-top:1rem">Screen</button>
         <div id="safetyOutput" class="output" style="display:none"></div>
@@ -350,6 +380,7 @@
   </div>
 
   <script src="https://unpkg.com/seqviz@3/dist/seqviz.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
   <script>
     const API = 'http://127.0.0.1:8080';
 
@@ -364,6 +395,10 @@
     let ARCIUM_URL = 'http://127.0.0.1:3001';
     let arciumOn = false;
     let arciumReady = false;
+    let solanaConfigured = false;
+    let solanaRpcUrl = 'https://api.devnet.solana.com';
+    let walletConnected = false;
+    let walletPublicKey = null;
 
     async function fetchArciumInfo() {
       try {
@@ -410,7 +445,97 @@
       }
     });
 
+    async function fetchSolanaInfo() {
+      const statusEl = document.getElementById('solanaStatus');
+      const connectBtn = document.getElementById('connectWalletBtn');
+      try {
+        const r = await fetch(API + '/api/solana-info');
+        const j = await r.json();
+        solanaConfigured = !!j.configured;
+        if (j.rpc_url) solanaRpcUrl = j.rpc_url;
+        const hint = solanaConfigured ? '(Ready)' : '(Not configured — connect wallet to attest)';
+        ['encode', 'decode', 'safety'].forEach(t => {
+          const el = document.getElementById(t + 'SolanaHint');
+          if (el) el.textContent = hint;
+        });
+        if (j.configured) {
+          statusEl.className = 'arcium-status ready';
+          statusEl.textContent = 'Ready — ' + (j.wallet_pubkey ? j.wallet_pubkey.slice(0, 4) + '…' + j.wallet_pubkey.slice(-4) : 'server keypair');
+          connectBtn.style.display = 'none';
+        } else {
+          statusEl.className = 'arcium-status';
+          statusEl.textContent = 'Not configured';
+          connectBtn.style.display = 'inline-block';
+          connectBtn.textContent = 'Connect Wallet';
+        }
+      } catch (e) {
+        statusEl.className = 'arcium-status error';
+        statusEl.textContent = 'Unable to check';
+        connectBtn.style.display = 'inline-block';
+      }
+    }
+
+    async function submitWalletAttestation(operation, sequence, mode, status) {
+      if (!walletPublicKey || !walletConnected) return null;
+      const body = { operation, sequence, payer: walletPublicKey };
+      if (mode) body.mode = mode;
+      if (status) body.status = status;
+      const r = await fetch(API + '/api/build-attest-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || JSON.stringify(j));
+      const txBuf = new Uint8Array([...atob(j.transaction)].map(c => c.charCodeAt(0)));
+      const provider = window.phantom?.solana;
+      if (!provider) throw new Error('Phantom wallet not found');
+      const solana = window.solanaWeb3 || window.solana || (typeof solanaWeb3 !== 'undefined' ? solanaWeb3 : null);
+      if (!solana?.Transaction) throw new Error('Solana web3.js not loaded');
+      const tx = solana.Transaction.from(txBuf);
+      const signed = await provider.signTransaction(tx);
+      const conn = new solana.Connection(solanaRpcUrl);
+      const sig = await conn.sendRawTransaction(signed.serialize());
+      return sig;
+    }
+
+    function updateWalletUI() {
+      const connectBtn = document.getElementById('connectWalletBtn');
+      const addrEl = document.getElementById('walletAddress');
+      if (walletConnected && walletPublicKey) {
+        connectBtn.textContent = 'Disconnect';
+        addrEl.textContent = walletPublicKey.slice(0, 4) + '…' + walletPublicKey.slice(-4);
+        addrEl.style.display = 'inline';
+      } else {
+        connectBtn.textContent = 'Connect Wallet';
+        addrEl.style.display = 'none';
+      }
+    }
+
+    document.getElementById('connectWalletBtn').addEventListener('click', async () => {
+      if (walletConnected) {
+        walletConnected = false;
+        walletPublicKey = null;
+        updateWalletUI();
+        return;
+      }
+      const provider = window.phantom?.solana;
+      if (!provider) {
+        alert('Phantom wallet not found. Install Phantom from phantom.app');
+        return;
+      }
+      try {
+        const resp = await provider.connect();
+        walletPublicKey = resp.publicKey?.toString() || null;
+        walletConnected = !!walletPublicKey;
+        updateWalletUI();
+      } catch (e) {
+        alert('Failed to connect: ' + (e.message || e));
+      }
+    });
+
     fetchArciumInfo();
+    fetchSolanaInfo();
 
     document.querySelectorAll('.tab').forEach(t => {
       t.addEventListener('click', () => {
@@ -793,6 +918,8 @@
       if (mode === 'secure' && !password) { out.textContent = 'Password required for secure mode'; out.classList.add('error'); out.style.display = 'block'; return; }
       if (arciumOn && !arciumReady && mode !== 'splitkey') { out.textContent = 'Connect to Arcium first (toggle on and wait for connection)'; out.classList.add('error'); out.style.display = 'block'; return; }
       if (arciumOn && msg.length > 4 && mode !== 'splitkey') { out.textContent = 'Arcium MPC supports max 4 characters. Use local encode for longer messages.'; out.classList.add('error'); out.style.display = 'block'; return; }
+      const storeOnChain = document.getElementById('encodeStoreOnChain').checked;
+      if (storeOnChain && !solanaConfigured && !walletConnected) { out.textContent = 'Connect wallet to attest on chain (Solana not configured)'; out.classList.add('error'); out.style.display = 'block'; return; }
 
       out.classList.remove('error', 'success');
       try {
@@ -811,7 +938,8 @@
         } else {
           const body = { message: msg, mode };
           if (mode === 'secure') body.password = password;
-          if (document.getElementById('encodeStoreOnChain').checked) body.store_on_chain = true;
+          const useWalletAttest = storeOnChain && !solanaConfigured && walletConnected;
+          if (storeOnChain && solanaConfigured) body.store_on_chain = true;
           const r = await fetch(API + '/api/encode', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -821,7 +949,13 @@
           if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
           else {
             let txt = j.dna_sequence + (j.stats ? '\n\n' + j.stats.length + ' bases, GC: ' + j.stats.gc_content + '%' : '');
-            if (j.transaction_signature) txt += '\n\nAttested on Solana: ' + j.transaction_signature + '\nhttps://explorer.solana.com/tx/' + j.transaction_signature + '?cluster=devnet';
+            let txSig = j.transaction_signature;
+            if (useWalletAttest) {
+              try {
+                txSig = await submitWalletAttestation('encode', j.dna_sequence, mode, null);
+              } catch (e) { out.textContent = txt + '\n\nAttestation failed: ' + e.message; out.classList.add('error'); out.style.display = 'block'; return; }
+            }
+            if (txSig) txt += '\n\nAttested on Solana: ' + txSig + '\nhttps://explorer.solana.com/tx/' + txSig + '?cluster=devnet';
             if (mode === 'splitkey' && j.k1_base64) txt += '\n\n[Split Key] Save K1 securely. Escrow K2 via plasmid tab or POST /escrow-store. Transmission ID: ' + (j.transmission_id || '');
             out.textContent = txt;
             out.classList.add('success');
@@ -878,6 +1012,8 @@
 
       if (arciumOn && mode !== 'splitkey' && !arciumReady) { out.textContent = 'Connect to Arcium first (toggle on and wait for connection)'; out.classList.add('error'); out.style.display = 'block'; return; }
       if (arciumOn && mode !== 'splitkey' && seq.length !== 16) { out.textContent = 'Arcium MPC requires exactly 16 DNA bases.'; out.classList.add('error'); out.style.display = 'block'; return; }
+      const decodeOnChain = document.getElementById('decodeOnChain').checked;
+      if (decodeOnChain && !solanaConfigured && !walletConnected) { out.textContent = 'Connect wallet to record on chain (Solana not configured)'; out.classList.add('error'); out.style.display = 'block'; return; }
 
       out.classList.remove('error', 'success');
       try {
@@ -922,7 +1058,8 @@
             body.k1_base64 = document.getElementById('decodeK1').value.trim();
             body.k2_base64 = k2Base64;
           }
-          if (document.getElementById('decodeOnChain').checked) body.decode_on_chain = true;
+          const useWalletAttest = decodeOnChain && !solanaConfigured && walletConnected;
+          if (decodeOnChain && solanaConfigured) body.decode_on_chain = true;
           const r = await fetch(API + '/api/decode', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -932,7 +1069,13 @@
           if (!r.ok) { out.textContent = j.error || JSON.stringify(j); out.classList.add('error'); }
           else {
             let txt = j.decoded_message;
-            if (j.transaction_signature) txt += '\n\nRecorded on Solana: ' + j.transaction_signature + '\nhttps://explorer.solana.com/tx/' + j.transaction_signature + '?cluster=devnet';
+            let txSig = j.transaction_signature;
+            if (useWalletAttest) {
+              try {
+                txSig = await submitWalletAttestation('decode', seq, mode, null);
+              } catch (e) { out.textContent = txt + '\n\nAttestation failed: ' + e.message; out.classList.add('error'); out.style.display = 'block'; return; }
+            }
+            if (txSig) txt += '\n\nRecorded on Solana: ' + txSig + '\nhttps://explorer.solana.com/tx/' + txSig + '?cluster=devnet';
             out.textContent = txt;
             out.classList.add('success');
           }
@@ -949,11 +1092,14 @@
       const out = document.getElementById('safetyOutput');
 
       if (!seq) { out.textContent = 'Enter a DNA sequence'; out.classList.add('error'); out.style.display = 'block'; return; }
+      const verifyOnChain = document.getElementById('safetyVerifyOnChain').checked;
+      if (verifyOnChain && !solanaConfigured && !walletConnected) { out.textContent = 'Connect wallet to verify on chain (Solana not configured)'; out.classList.add('error'); out.style.display = 'block'; return; }
 
       out.classList.remove('error', 'success');
       try {
         const body = { dna_sequence: seq };
-        if (document.getElementById('safetyVerifyOnChain').checked) body.verify_on_chain = true;
+        const useWalletAttest = verifyOnChain && !solanaConfigured && walletConnected;
+        if (verifyOnChain && solanaConfigured) body.verify_on_chain = true;
         const r = await fetch(API + '/api/safety-screen', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -965,7 +1111,13 @@
           let s = 'Status: ' + j.safety_status + ' ' + (j.safety_icon || '') + '\n';
           s += 'GC content: ' + (j.sequence_characteristics?.gc_content || 'N/A') + '%\n';
           if (j.recommendations?.length) s += '\nRecommendations: ' + j.recommendations.join('\n');
-          if (j.transaction_signature) s += '\n\nVerified on Solana: ' + j.transaction_signature + '\nhttps://explorer.solana.com/tx/' + j.transaction_signature + '?cluster=devnet';
+          let txSig = j.transaction_signature;
+          if (useWalletAttest) {
+            try {
+              txSig = await submitWalletAttestation('safety', seq, null, j.safety_status);
+            } catch (e) { out.textContent = s + '\n\nAttestation failed: ' + e.message; out.classList.add('error'); out.style.display = 'block'; return; }
+          }
+          if (txSig) s += '\n\nVerified on Solana: ' + txSig + '\nhttps://explorer.solana.com/tx/' + txSig + '?cluster=devnet';
           out.textContent = s;
           out.classList.add('success');
         }
