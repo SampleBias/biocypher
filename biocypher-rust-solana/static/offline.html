@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bi0cyph3r — Offline (Basic)</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --muted: #8b949e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    .container { max-width: 640px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; color: var(--accent); margin-bottom: 0.25rem; }
+    .badge {
+      display: inline-block;
+      background: var(--success);
+      color: var(--bg);
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 1.5rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; }
+    input, textarea, button {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    button {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      padding: 0.75rem 1.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+    button:hover { opacity: 0.9; }
+    .output {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--bg);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+    .error { color: #f85149; }
+    .success { color: var(--success); }
+    .muted { color: var(--muted); font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Bi0cyph3r — Offline</h1>
+    <span class="badge">No server — 100% local — Basic mode only</span>
+    <p class="muted">Save this file and open it anywhere. No network, no server, no data leaves your device.</p>
+
+    <div class="card">
+      <label>Encode</label>
+      <textarea id="encodeInput" placeholder="Enter message to encode"></textarea>
+      <button id="encodeBtn">Encode → DNA</button>
+      <div id="encodeOut" class="output" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <label>Decode</label>
+      <textarea id="decodeInput" placeholder="Enter DNA sequence (ATCG)"></textarea>
+      <button id="decodeBtn">Decode → Message</button>
+      <div id="decodeOut" class="output" style="display:none"></div>
+    </div>
+  </div>
+
+  <script>
+    // Basic DNA mapping: 00=A, 01=T, 10=C, 11=G
+    const DNA_ENCODE = { '00':'A', '01':'T', '10':'C', '11':'G' };
+    const DNA_DECODE = { 'A':'00', 'T':'01', 'C':'10', 'G':'11' };
+
+    function textToBinary(text) {
+      let out = '';
+      for (let i = 0; i < text.length; i++) {
+        const b = text.charCodeAt(i).toString(2);
+        out += b.padStart(8, '0');
+      }
+      return out;
+    }
+
+    function binaryToDna(binary) {
+      let out = '';
+      for (let i = 0; i < binary.length; i += 2) {
+        const pair = (binary.slice(i, i + 2) + '0').slice(0, 2);
+        out += DNA_ENCODE[pair] || '';
+      }
+      return out;
+    }
+
+    function dnaToBinary(dna) {
+      let out = '';
+      const s = dna.replace(/\s/g, '').toUpperCase();
+      for (let i = 0; i < s.length; i++) {
+        if (DNA_DECODE[s[i]]) out += DNA_DECODE[s[i]];
+      }
+      return out;
+    }
+
+    function binaryToText(binary) {
+      let out = '';
+      for (let i = 0; i < binary.length; i += 8) {
+        const chunk = binary.slice(i, i + 8);
+        if (chunk.length === 8) {
+          const byte = parseInt(chunk, 2);
+          if (byte >= 32 && byte <= 126) out += String.fromCharCode(byte);
+        }
+      }
+      return out;
+    }
+
+    function encode(msg) {
+      if (!msg) return '';
+      return binaryToDna(textToBinary(msg));
+    }
+
+    function decode(dna) {
+      if (!dna) return '';
+      return binaryToText(dnaToBinary(dna));
+    }
+
+    document.getElementById('encodeBtn').addEventListener('click', () => {
+      const msg = document.getElementById('encodeInput').value;
+      const out = document.getElementById('encodeOut');
+      out.textContent = encode(msg) || '(empty)';
+      out.className = 'output success';
+      out.style.display = 'block';
+    });
+
+    document.getElementById('decodeBtn').addEventListener('click', () => {
+      const seq = document.getElementById('decodeInput').value.trim().replace(/\s/g, '');
+      const out = document.getElementById('decodeOut');
+      out.textContent = decode(seq) || '(empty)';
+      out.className = 'output success';
+      out.style.display = 'block';
+    });
+  </script>
+</body>
+</html>

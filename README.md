@@ -106,14 +106,24 @@ bi0cyph3r safety "ATCGATCGATCG"
 ./run-server.sh
 ```
 
-### Option 2: CLI only (no server)
+### Option 2: Offline mode (no server, no network)
+
+**Single HTML file** — Save and open anywhere. Basic encode/decode only. No data leaves your device.
+
+```bash
+# Save and open in a browser (file:// or served)
+open biocypher-rust-solana/static/offline.html
+# Or copy the file and open it on any machine
+```
+
+**CLI** — Fully offline for Basic mode:
 
 ```bash
 cd biocypher-rust-solana
 cargo build --release --bin bi0cyph3r
 
-./target/release/bi0cyph3r encode "Hello World"
-./target/release/bi0cyph3r decode "TACATCTTTCGATCGATCGG"
+./target/release/bi0cyph3r encode "Hello World" --mode basic
+./target/release/bi0cyph3r decode "TACATCTTTCGATCGATCGG" --mode basic
 ./target/release/bi0cyph3r safety "ATCGATCGATCG"
 ```
 
